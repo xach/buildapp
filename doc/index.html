@@ -1,0 +1,376 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel='stylesheet' type='text/css' href='style.css'>
+    <title>Buildapp - Create executables with SBCL</title>
+    </head>
+  <body>
+
+<div id='content'>
+ <h2>Buildapp - Create executables with SBCL</h2>
+
+<div id='summary'>
+ <p>Buildapp is an application for SBCL that configures and saves an
+   executable Common Lisp image. It is similar
+   to <a href='http://www.cliki.net/cl-launch'>cl-launch</a> and
+   hu.dwim.build. Buildapp is available under
+   a <a href='#license'>BSD-style license</a>. The latest version is
+   1.0, released on February 11th, 2010.
+
+ <p>Download shortcut: <a href='http://www.xach.com/lisp/buildapp.tgz'>http://www.xach.com/lisp/buildapp.tgz</a>
+</div>
+
+ <h2>Contents</h2>
+
+ <ul>
+   <li> <a href='#installation'>Installation</a>
+   <li> <a href='#example'>Example Use</a>
+   <li> <a href='#overview'>Overview</a>
+   <li> <a href='#limitations'>Limitations</a>
+   <li> <a href='#implementation'>Implementation</a>
+   <li> <a href='#feedback'>Feedback</a>
+   <li> <a href='#license'>License</a>
+</ul>
+
+<a name='installation'><h2>Installation</h2></a>
+
+<p>Buildapp does not require any libraries. To create and install the
+  application, use <tt>make&nbsp;install</tt>. By default, it is
+  installed in <tt>/usr/local/bin</tt>; to use another location,
+  use <tt>make&nbsp;DESTDIR=/path&nbsp;install</tt>.
+
+<p>You can also create the buildapp binary by loading the buildapp
+  system with asdf and running <tt>(buildapp:build-buildapp)</tt>.
+
+
+<a name='example'><h2>Example Use</h2></a>
+
+<p>The following creates a
+  toy <a href="http://curl.haxx.se/">curl</a>-like application. (It's
+  not quite practical, because any errors will land you in the
+  interactive debugger.)
+
+<pre class='code'>
+$ <b>buildapp --output lisp-curl --asdf-path ~/src/clbuild/systems/ \
+    --load-system drakma \
+    --eval '(defun main (args) (write-string (drakma:http-request (second args))))' \
+    --entry main</b>
+;; loading system sb-grovel (needed by drakma)
+;;  from /usr/local/lib/sbcl/sb-grovel/
+;; loading system sb-posix (needed by cl+ssl)
+;;  from /usr/local/lib/sbcl/sb-posix/
+;; loading system trivial-gray-streams (needed by chunga, cl+ssl, flexi-streams)
+;;  from /home/xach/src/clbuild/source/trivial-gray-streams/
+;; loading system flexi-streams (needed by drakma, cl+ssl)
+;;  from /home/xach/src/clbuild/source/flexi-streams/
+;; loading system alexandria (needed by cffi, babel)
+;;  from /home/xach/src/clbuild/source/alexandria/
+;; loading system trivial-features (needed by cffi, babel)
+;;  from /home/xach/src/clbuild/source/trivial-features/
+;; loading system babel (needed by cffi)
+;;  from /home/xach/src/clbuild/source/babel/
+;; loading system cffi (needed by cl+ssl)
+;;  from /home/xach/src/clbuild/source/cffi/
+;; loading system cl+ssl (needed by drakma)
+;;  from /home/xach/src/clbuild/source/cl+ssl/
+;; loading system sb-bsd-sockets (needed by usocket)
+;;  from /usr/local/lib/sbcl/sb-bsd-sockets/
+;; loading system usocket (needed by drakma)
+;;  from /home/xach/src/clbuild/source/usocket/
+;; loading system chunga (needed by drakma)
+;;  from /home/xach/src/clbuild/source/chunga/
+;; loading system cl-base64 (needed by drakma)
+;;  from /home/xach/src/clbuild/source/cl-base64/
+;; loading system puri (needed by drakma)
+;;  from /home/xach/src/clbuild/source/puri/
+;; loading system drakma 
+;;  from /home/xach/src/clbuild/source/drakma/
+[undoing binding stack and other enclosing state... done]
+[saving current Lisp image into lisp-curl:
+writing 6352 bytes from the read-only space at 0x20000000
+writing 5472 bytes from the static space at 0x20100000
+writing 61722624 bytes from the dynamic space at 0x1000000000
+done]
+
+$ <b>./lisp-curl http://xach.com/</b>
+&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+       "http://www.w3.org/TR/REC-html40/loose.dtd">
+&lt;HTML>
+&lt;HEAD>
+&lt;TITLE>www.xach.com&lt;/TITLE>
+&lt;/HEAD>
+...
+</pre>
+
+<p>Here's how the <a href="http://l1sp.org/">l1sp.org</a> redirection
+  service application is built:
+
+<pre class='code'>
+$ <b>make</b>
+buildapp --output l1sp --entry redirector:main \
+                 --asdf-path /opt/l1sp/systems \
+                 --require sb-aclrepl \
+                 --eval '(pushnew :hunchentoot-no-ssl *features*)' \
+                 --load-system swank \
+                 --eval '(setf swank:*log-output* nil)' \
+                 --load-system redirector
+;; loading system sb-grovel
+;;  from /usr/local/lib/sbcl/sb-grovel/
+;; loading system sb-bsd-sockets
+;;  from /usr/local/lib/sbcl/sb-bsd-sockets/
+;; loading system sb-introspect
+;;  from /usr/local/lib/sbcl/sb-introspect/
+;; loading system sb-posix
+;;  from /usr/local/lib/sbcl/sb-posix/
+;; loading system sb-cltl2
+;;  from /usr/local/lib/sbcl/sb-cltl2/
+;; loading system swank
+;;  from /opt/l1sp/src/slime/
+;; loading system html-template (needed by redirector)
+;;  from /opt/l1sp/src/html-template-0.9.1/
+;; loading system sb-rotate-byte (needed by sb-md5)
+;;  from /usr/local/lib/sbcl/sb-rotate-byte/
+;; loading system sb-md5 (needed by redirector)
+;;  from /usr/local/lib/sbcl/sb-md5/
+;; loading system cl-who (needed by redirector)
+;;  from /opt/l1sp/src/cl-who-0.11.1/
+;; loading system cl-ppcre (needed by hunchentoot, redirector)
+;;  from /opt/l1sp/src/cl-ppcre-2.0.0/
+;; loading system url-rewrite (needed by hunchentoot)
+;;  from /opt/l1sp/src/url-rewrite-0.1.1/
+;; loading system rfc2388 (needed by hunchentoot)
+;;  from /opt/l1sp/src/rfc2388/
+;; loading system md5 (needed by hunchentoot)
+;;  from /opt/l1sp/src/md5-1.8.5/
+;; loading system cl-fad (needed by hunchentoot)
+;;  from /opt/l1sp/src/cl-fad-0.6.2/
+;; loading system cl-base64 (needed by hunchentoot)
+;;  from /opt/l1sp/src/cl-base64-3.3.2/
+;; loading system trivial-gray-streams (needed by flexi-streams)
+;;  from /opt/l1sp/src/trivial-gray-streams-2006-09-16/
+;; loading system flexi-streams (needed by chunga)
+;;  from /opt/l1sp/src/flexi-streams-1.0.7/
+;; loading system chunga (needed by hunchentoot)
+;;  from /opt/l1sp/src/chunga-0.4.3/
+;; loading system hunchentoot (needed by redirector)
+;;  from /opt/l1sp/src/hunchentoot-0.15.7/
+;; loading system redirector
+;;  from /opt/l1sp/src/redirector/
+[undoing binding stack and other enclosing state... done]
+[saving current Lisp image into l1sp:
+writing 6176 bytes from the read-only space at 0x20000000
+writing 4064 bytes from the static space at 0x20100000
+writing 61042688 bytes from the dynamic space at 0x1000000000
+done]
+
+$ <b>./l1sp</b>
+;; Swank started at port: 7717.
+CL-USER(1):
+</pre>
+
+<p>The <tt>(setf swank:*log-output* nil)</tt> eval is needed to avoid
+  problems when the image restarts.
+
+<p><tt>redirector::main</tt> looks like this:
+
+<pre class='code'>
+(defun main (argv)
+  (declare (ignore argv))
+  (load "/opt/l1sp/etc/init.lisp")
+  (sb-impl::toplevel-repl nil))
+</pre>
+
+<a name='overview'><h2>Overview</h2>
+
+<p>Here is the usage output of buildapp:
+
+<pre>
+Usage: buildapp --output OUTPUT-FILE [--flag1 value1 ...]
+
+Required flags:
+  --output OUTPUT-FILE      Use OUTPUT-FILE as the name of the executable
+                              to create
+
+Toplevel flag:
+  --entry NAME              Use the function identified by NAME as the
+                              executable's toplevel function. Called
+                              with SB-EXT:*POSIX-ARGV* as its only
+                              argument. If NAME has a colon, it is
+                              treated as a package separator,
+                              otherwise CL-USER is the implied
+                              package.
+
+Action flags:
+  --load FILE               Load FILE. CL:*PACKAGE* is bound to the CL-USER
+                              package before loading
+  --load-system NAME        Load an ASDF system identified by NAME
+  --require NAME            Use CL:REQUIRE to load NAME
+  --eval CODE               Use CL:EVAL to evaulate CODE. The code is read
+                              with CL:READ-FROM-STRING in the CL-USER package
+
+There may be any number of load/load-system/require/eval flags. Each
+is executed in command-line order before creating an executable.
+
+Load path flags:
+  --load-path DIRECTORY     When handling a --load, search DIRECTORY for
+                              files to load
+  --asdf-path DIRECTORY     When handling a --load-system, search DIRECTORY
+                              for ASDF system files to load
+  --asdf-tree DIRECTORY     When handling a --load-system, search DIRECTORY
+                              and all its subdirectories for ASDF system
+                              files to load
+
+There may be any number of load-path/asdf-path/asdf-tree
+flags. asdf-path arguments take precedence over asdf-tree arguments.
+
+Other flags:
+  --help                    Show this usage message
+  --logfile FILE            Log compilation and load output to FILE
+  --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
+                              found in your PATH environment variable
+</pre>
+
+
+
+<a name='limitations'><h2>Limitations</h2></a>
+
+<p>Buildapp is limited in scope. It aims to make the following steps
+  easy:
+
+<ul>
+<li> Define an application environment by loading files, loading ASDF
+  systems,  evaluating code, and using CL:REQUIRE
+<li> Dump an executable image with an arbitrary startup function
+</ul>
+
+<p>By design, it does <i>not</i> handle the following tasks:
+
+<ul>
+<li> Initialization tasks at app startup
+  (use <a href='http://l1sp.org/sbcl/sb-ext:*init-hooks*'>SB-EXT:*INIT-HOOKS*</a>
+  for that)
+<li> Debugger management
+  (use <a href='http://l1sp.org/sbcl/sb-ext:*invoke-debugger-hook*'>SB-EXT:*INVOKE-DEBUGGER-HOOK*</a>
+  for that)
+<li> Command-line processing (use a library such
+  as <a href='http://common-lisp.net/project/qitab/'>COMMAND-LINE-ARGUMENTS</a>
+  for that)
+<li> Obtaining libraries
+  (use <a href='http://common-lisp.net/project/clbuild/'>clbuild</a>,
+  <a href='http://libcl.com/'>LibCL</a>, <a href='http://common-lisp.net/project/cl-librarian/'>cl-librarian</a>,
+  asdf-install, etc. for that)
+</ul>
+
+
+<a name='implementation'><h2>Implementation</h2></a>
+
+<p>Buildapp works like this:
+
+<ol>
+
+<li>It processes the command-line and creates an object that
+  captures the command-line requirements: the output file, any
+  eval/load/load-system/require actions, the entry function, etc.
+
+<li>It creates a new Lisp file (the <i>dumpfile</i>) with all the
+  commands needed to implement the command-line options.
+
+<li>It runs "sbcl"
+  with <a href='http://l1sp.org/sbcl/sb-ext:run-program'><tt>run-program</tt></a>. sbcl
+  is invoked with no init files (it doesn't read user or system
+  sbcl rc files) and loads the dumpfile:
+
+<ol>
+
+<li>The first few commands of the dumpfile establish a specialized
+  loading environment:
+
+<ul>
+<li> The debugger is changed
+  with <a href='http://l1sp.org/sbcl/sb-ext:*invoke-debugger-hook*'><tt>*invoke-debugger-hook*</tt></a>
+  to simply quit with a special exit code instead of entering the
+  normal debugger
+<li> Most output output (ASDF system compilation output, low-level
+  error messages, etc) is redirected to a log stream; that stream can
+  be directed to a file with the <tt>--logfile</tt> argument
+<li> Stale FASLs are automatically recompiled with an <tt>:around</tt>
+  method on <tt>asdf:perform</tt>
+</ul>
+
+<li>There are some sanity checks: Is the
+  output file writable? Does this version of sbcl support the
+  required <tt>:save-runtime-options</tt> argument?
+
+<li>The dumpfile performs the eval/load/load-system/require actions.
+
+<li>The dumpfile clears itself out of the environment:
+
+<ul>
+<li> Remove extra ASDF methods
+ with <a href='http://l1sp.org/cl/remove-method'><tt>remove-method</tt></a>
+<li> Reset <tt>sb-ext:*invoke-debugger-hook*</tt> to NIL
+<li> Delete the dumpfile package
+ with <a href='http://l1sp.org/cl/delete-package'><tt>delete-package</tt></a>
+</ul>
+
+<li>The dumpfile then creates an executable
+  with <a href="http://l1sp.org/sbcl/sb-ext:save-lisp-and-die"><tt>save-lisp-and-die</tt></a>. This
+  ends the sbcl subprocess.
+</ol>
+
+<li> It deletes the dumpfile.
+</ol>
+
+<p>There are two things to keep in mind to avoid conflicts with
+  buildapp's implementation strategy:
+
+<ul>
+<li> <tt>sb-ext:*invoke-debugger-hook*</tt> is set to NIL before
+  saving the image, so any changes to the variable must be done at
+  application startup time (via your <tt>--entry</tt> function
+  or <tt>sb-ext:*init-hooks*</tt>) instead of application load time
+<li> The ASDF central registry is temporarily extended with
+  the <tt>--asdf-path</tt> and <tt>--asdf-tree</tt> arguments at load
+  time, and reverts back to the default central registry value after
+  that; changes to the central registry should be done at startup time
+  instead of application load time 
+</ul>
+
+
+
+<a name='feedback'><h2>Feedback</h2></a>
+
+<p>If you have any questions or comments about buildapp, please email
+  me, <a href='mailto:xach@xach.com'>Zach Beane</a>.
+
+<a name='license'><h2>License</h2></a>
+
+<p>Copyright &copy; 2010 Zachary Beane, All Rights Reserved
+
+<p> Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+
+<ul>
+<li>
+    Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+
+<li> Redistributions in binary form must reproduce the above
+     copyright notice, this list of conditions and the following
+     disclaimer in the documentation and/or other materials
+     provided with the distribution.
+
+</ul>
+<p> THIS SOFTWARE IS PROVIDED BY THE AUTHOR 'AS IS' AND ANY EXPRESSED
+ OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+

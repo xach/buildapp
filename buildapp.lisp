@@ -30,6 +30,12 @@
 
 (in-package #:buildapp)
 
+(defparameter *output-type-pathname*
+  (make-pathname :type (pathname-type sb-ext:*runtime-pathname*))
+  "This pathname is merged with the output parameter to produce the
+  final output executable name. It's meant to automatically include
+  the executable suffix .EXE on Windows.")
+
 (defparameter *short-usage*
   "Usage: buildapp --output OUTPUT-FILE [--flag1 value1 ...]
 
@@ -43,7 +49,7 @@ Required flags:
   --output OUTPUT-FILE      Use OUTPUT-FILE as the name of the executable
                               to create
 
-Toplevel flag:
+Entry-point flags:
   --entry NAME              Use the function identified by NAME as the
                               executable's toplevel function. Called
                               with SB-EXT:*POSIX-ARGV* as its only
@@ -51,6 +57,20 @@ Toplevel flag:
                               treated as a package separator,
                               otherwise CL-USER is the implied
                               package.
+  --dispatched-entry DNAME  Specify one possible entry function, depending
+                              on the name of the file that is used to
+                              start the application. The syntax of
+                              DNAME is APPLICATION-NAME/ENTRY-NAME. If the
+                              name used to start the executable matches
+                              APPLICATION-NAME, use ENTRY-NAME as the
+                              entry point. This can be used to choose
+                              one of many possible entry points by
+                              e.g. symlinking names to the application
+                              executable. If APPLICATION-NAME is empty, the
+                              specified ENTRY-NAME is used as a default
+                              if no other application names match. There
+                              may be any number of dispatched entry points,
+                              but only one default.
 
 Action flags:
   --load FILE               Load FILE. CL:*PACKAGE* is bound to the CL-USER
@@ -250,8 +270,9 @@ it. If an exact filename is not found, file.lisp is also tried."
 (defun dumpfile-forms (dumper)
   "Return a list of forms to be saved to a dumpfile."
   (let* ((package (package dumper))
-         (entry (and (entry dumper)
-                     (make-pseudosymbol (entry dumper))))
+         (output (merge-pathnames (output dumper) *output-type-pathname*))
+         (entry-function-form
+          (entry-function-form dumper))
          (asdf (needs-asdf-p dumper)))
     `((cl:defpackage ,package
         (:use #:cl))
@@ -289,10 +310,9 @@ it. If an exact filename is not found, file.lisp is also tried."
       ,(dumper-action-form dumper)
       ,@(when asdf
               '((remove-dumper-methods)))
-      ,@(when entry
-              (list
-               (dump-form 'check-pseudosymbol)
-               (pseudosymbol-check-form entry)))
+      ,@(when entry-function-form
+              (list (dump-form 'check-pseudosymbol)
+                    (entry-function-check-form dumper)))
       (ignore-errors (close *logfile-output*))
       ;; Remove buildapp artifacts from the system
       (in-package #:cl-user)
@@ -300,15 +320,12 @@ it. If an exact filename is not found, file.lisp is also tried."
       (delete-package ',package)
       (sb-ext:gc :full t)
       (sb-ext:save-lisp-and-die
-        ,(output dumper)
+        ,output
         :executable t
         :save-runtime-options t
-        ,@(when entry
+        ,@(when entry-function-form
                 (list :toplevel
-                      `(lambda ()
-                         (with-simple-restart (abort "Exit application")
-                           (,entry
-                            sb-ext:*posix-argv*)))))))))
+                      entry-function-form))))))
 
 (defun write-dumpfile (dumper stream)
   (let ((*print-case* :downcase))

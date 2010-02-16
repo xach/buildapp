@@ -109,6 +109,40 @@ location."
                    :package-string package
                    :symbol-string symbol)))
 
+(defclass dispatched-entry ()
+  ((binary-name
+    :initarg :binary-name
+    :accessor binary-name
+    :initform nil)
+   (entry
+    :initarg :entry
+    :accessor entry
+    :initform ""))
+  (:documentation "A dispatched entry is used to select an entry point
+  depending on the name of the binary that invoked the application. If
+  the binary name is empty, it is considered the default entry if no
+  match is found."))
+
+(defmethod print-object ((dispatched-entry dispatched-entry) stream)
+  (print-unreadable-object (dispatched-entry stream :type t)
+    (format stream "~A/~A"
+            (binary-name dispatched-entry)
+            (entry dispatched-entry))))
+
+(define-condition malformed-dispatch-entry (error) ())
+
+(defun make-dispatched-entry (string)
+  (let ((slash (position #\/ string)))
+    (unless slash
+      (error 'malformed-dispatch-entry))
+    (let ((binary-name (subseq string 0 slash))
+          (entry (make-pseudosymbol (subseq string (1+ slash)))))
+      (make-instance 'dispatched-entry
+                     :binary-name binary-name
+                     :entry entry))))
+
+(defun default-entry-p (dispatch-entry)
+  (zerop (length (binary-name dispatch-entry))))
 
 (defun directorize (namestring)
   (concatenate 'string (string-right-trim "/" namestring) "/"))

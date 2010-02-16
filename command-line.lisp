@@ -72,6 +72,16 @@
    :description "Duplicate argument"
    :extra-info " -- must be provided at most once"))
 
+(define-condition duplicate-default-dispatched-entry (duplicate-argument)
+  ()
+  (:default-initargs
+   :description "Duplicate default dispatched entry"
+   :extra-info " -- only one default dispatched entry is allowed"))
+
+(define-condition entry-and-dispatched-entry (provided-argument-error)
+  ()
+  (:report "Cannot specify both --entry and --dispatched-entry"))
+
 (defun argument-keyword (argument)
   "Convert a command-line argument to a keyword symbol."
   (find-symbol (string-upcase (subseq argument 2)) :keyword))
@@ -79,7 +89,8 @@
 (defun command-line-dumper (args)
   (when (oddp (length args))
     (error 'odd-number-of-arguments))
-  (let ((plan (make-instance 'dumper)))
+  (let ((plan (make-instance 'dumper))
+        (default-dispatched-entry nil))
     (loop
       (when (endp args)
         (unless (output plan)
@@ -113,9 +124,21 @@
            (when (sbcl plan)
              (setf (sbcl plan) value)))
           (:entry
+           (when (dispatched-entries plan)
+             (error 'entry-and-dispatched-entry))
            (when (entry plan)
              (error 'duplicate-argument :flag argument))
-           (setf (entry plan) value))
+           (setf (entry plan) (make-pseudosymbol value)))
+          (:dispatched-entry
+           (when (entry plan)
+             (error 'entry-and-dispatched-entry))
+           (let ((entry (make-dispatched-entry value)))
+             (when (default-entry-p entry)
+               (if default-dispatched-entry
+                   (error 'duplicate-default-dispatched-entry
+                          :flag (format nil "~A ~A" argument value))
+                   (setf default-dispatched-entry entry)))
+             (push entry (dispatched-entries plan))))
           (t
            (error 'unknown-argument :flag argument)))))))
 

@@ -43,6 +43,10 @@
     :initarg :entry
     :accessor entry
     :initform nil)
+   (dispatched-entries
+    :initarg :dispatched-entries
+    :accessor dispatched-entries
+    :initform nil)
    (asdf-paths
     :initarg :asdf-paths
     :accessor asdf-paths
@@ -89,6 +93,54 @@
         (dolist (directory (all-asdf-directories root))
           (pushnew directory result :test #'string=))))))
 
+(defun dispatched-entry-form (dispatched-entries)
+  (let ((default nil))
+    (flet ((one-clause (entry)
+             (let* ((binary-name (binary-name entry))
+                    (entry-function (entry entry))
+                    (call `(,entry-function sb-ext:*posix-argv*)))
+               (if (default-entry-p entry)
+                   (progn (setf default entry) nil)
+                   (list
+                    `((string= binary-name ,binary-name)
+                      (return ,call)))))))
+      `(with-simple-restart (abort "Exit application")
+         (lambda ()
+           (block nil
+             (let ((binary-name (pathname-name (pathname (first sb-ext:*posix-argv*)))))
+               (cond ,@(mapcan #'one-clause dispatched-entries))
+               ,@(if default
+                     (list
+                      `(,(entry default) sb-ext:*posix-argv*))
+                     (list
+                      `(format *error-output* "Unknown dispatch name '~A', quitting~%"
+                               binary-name)
+                      '(sb-ext:quit :unix-status 1))))))))))
+
+(defgeneric entry-function-form (dumper)
+  (:method (dumper)
+    (cond ((entry dumper)
+           `(lambda ()
+              (with-simple-restart (abort "Exit application")
+                (,(entry dumper)
+                 sb-ext:*posix-argv*))))
+          ((dispatched-entries dumper)
+           (dispatched-entry-form (dispatched-entries dumper))))))
+
+(defgeneric entry-function-check-form (dumper)
+  (:method (dumper)
+    (cond ((entry dumper)
+           (pseudosymbol-check-form (entry dumper)))
+          ((dispatched-entries dumper)
+           `(progn
+              ,@(mapcar (lambda (dentry)
+                          (pseudosymbol-check-form (entry dentry)))
+                        (dispatched-entries dumper)))))))
+
+
+;;; Dumpable forms are both evaluated and saved away for later use in
+;;; the dumper file.
+
 (defparameter *dumpable-forms* (make-hash-table))
 
 (defmacro dumpable (name &body body)
@@ -99,3 +151,4 @@
 
 (defun dump-form (name)
   (gethash name *dumpable-forms*))
+

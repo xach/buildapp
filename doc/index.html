@@ -15,7 +15,7 @@
    to <a href='http://www.cliki.net/cl-launch'>cl-launch</a> and
    hu.dwim.build. Buildapp is available under
    a <a href='#license'>BSD-style license</a>. The latest version is
-   1.0, released on February 11th, 2010.
+   1.1, released on February 12th, 2010.
 
  <p>Download shortcut: <a href='http://www.xach.com/lisp/buildapp.tgz'>http://www.xach.com/lisp/buildapp.tgz</a>
 </div>
@@ -44,6 +44,25 @@
 
 
 <a name='example'><h2>Example Use</h2></a>
+
+<p>Here's a small application:
+
+<pre class=code>
+$ <b>buildapp \
+    --eval '(defun main (argv) (declare (ignore argv)) (write-line "Hello, world"))' \
+    --entry main \
+    --output hello-world</b>
+[undoing binding stack and other enclosing state... done]
+[saving current Lisp image into hello-world:
+writing 6352 bytes from the read-only space at 0x20000000
+writing 4064 bytes from the static space at 0x20100000
+writing 44834816 bytes from the dynamic space at 0x1000000000
+done]
+
+$ <b>./hello-world</b>
+Hello, world
+</pre>
+
 
 <p>The following creates a
   toy <a href="http://curl.haxx.se/">curl</a>-like application. (It's
@@ -180,6 +199,103 @@ CL-USER(1):
   (sb-impl::toplevel-repl nil))
 </pre>
 
+<p>Here's an example of the <tt>--dispatched-entry</tt> option, which
+  was inspired by the desire to have a dozen different small utilities
+  embedded in one big executable and called based on the binary name.
+
+First, the support files:
+
+<pre class=code>
+;;;; <b>utils.lisp</b>
+
+(defpackage #:utils
+  (:use #:cl))
+
+(in-package #:utils)
+
+(defun main (argv)
+  (let ((name (pathname-name (first argv))))
+    (format *error-output*
+            "Unknown binary name ~S, try using cl-echo, cl-ls, or cl-true~%"
+            name)
+    (sb-ext:quit :unix-status 1)))
+
+;;;; <b>ls.lisp</b>
+
+(defpackage #:ls
+  (:use #:cl))
+
+(in-package #:ls)
+
+(defun main (argv)
+  (declare (ignore argv))
+  (dolist (file (directory "*.*"))
+    (write-line (namestring file))))
+
+;;;; <b>echo.lisp</b>
+
+(defpackage #:echo
+  (:use #:cl))
+
+(in-package #:echo)
+
+(defun main (argv)
+  (format t "~{~A~^ ~}~%" (rest argv)))
+
+;;;; <b>true.lisp</b>
+
+(defpackage #:true
+  (:use #:cl))
+
+(in-package #:true)
+
+(defun main (argv)
+  (declare (ignore argv))
+  (sb-ext:quit :unix-status 0))
+</pre>
+
+<p>Buliding it all together looks like this:
+
+
+<pre class=code>
+$ <b>buildapp --output utils \
+   --load utils.lisp --dispatched-entry /utils:main \
+   --load ls.lisp --dispatched-entry cl-ls/ls:main \
+   --load echo.lisp --dispatched-entry cl-echo/echo:main \
+   --load true.lisp --dispatched-entry cl-true/true:main</b>
+;; loading file #P"/tmp/demo/utils.lisp"
+;; loading file #P"/tmp/demo/ls.lisp"
+;; loading file #P"/tmp/demo/echo.lisp"
+;; loading file #P"/tmp/demo/true.lisp"
+[undoing binding stack and other enclosing state... done]
+[saving current Lisp image into utils:
+writing 6352 bytes from the read-only space at 0x20000000
+writing 4064 bytes from the static space at 0x20100000
+writing 45223936 bytes from the dynamic space at 0x1000000000
+done]
+
+$ <b>ln -sf utils cl-ls</b>
+
+$ <b>ln -sf utils cl-echo</b>
+
+$ <b>ln -sf utils cl-true</b>
+
+$ <b>./cl-ls</b>
+/tmp/demo/cl-true
+/tmp/demo/echo.lisp
+/tmp/demo/ls.lisp
+/tmp/demo/true.lisp
+/tmp/demo/utils
+/tmp/demo/utils.lisp
+
+$ <b>./cl-echo Hello world</b>
+Hello world
+
+$ <b>./cl-true && echo $?</b>
+0
+
+</pre>
+
 <a name='overview'><h2>Overview</h2>
 
 <p>Here is the usage output of buildapp:
@@ -191,7 +307,7 @@ Required flags:
   --output OUTPUT-FILE      Use OUTPUT-FILE as the name of the executable
                               to create
 
-Toplevel flag:
+Entry-point flags:
   --entry NAME              Use the function identified by NAME as the
                               executable's toplevel function. Called
                               with SB-EXT:*POSIX-ARGV* as its only
@@ -199,6 +315,20 @@ Toplevel flag:
                               treated as a package separator,
                               otherwise CL-USER is the implied
                               package.
+  --dispatched-entry DNAME  Specify one possible entry function, depending
+                              on the name of the file that is used to
+                              start the application. The syntax of
+                              DNAME is APPLICATION-NAME/ENTRY-NAME. If the
+                              name used to start the executable matches
+                              APPLICATION-NAME, use ENTRY-NAME as the
+                              entry point. This can be used to choose
+                              one of many possible entry points by
+                              e.g. symlinking names to the application
+                              executable. If APPLICATION-NAME is empty, the
+                              specified ENTRY-NAME is used as a default
+                              if no other application names match. There
+                              may be any number of dispatched entry points,
+                              but only one default.
 
 Action flags:
   --load FILE               Load FILE. CL:*PACKAGE* is bound to the CL-USER
@@ -228,6 +358,8 @@ Other flags:
   --logfile FILE            Log compilation and load output to FILE
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
                               found in your PATH environment variable
+
+For the latest documentation, see http://www.xach.com/lisp/buildapp/
 </pre>
 
 

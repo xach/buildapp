@@ -30,7 +30,7 @@
 
 (asdf:defsystem #:buildapp
   :author "Zach Beane <xach@xach.com>"
-  :version "1.0"
+  :version "1.1"
   :serial t
   :components ((:file "package")
                (:file "utils")

@@ -31,7 +31,11 @@
 (in-package #:buildapp)
 
 (defparameter *output-type-pathname*
-  (make-pathname :type (pathname-type sb-ext:*runtime-pathname*))
+  (let* ((runtime-symbol (find-symbol "*RUNTIME-PATHNAME*" '#:sb-ext))
+         (template (if runtime-symbol
+                       (symbol-value runtime-symbol)
+                       "buildapp")))
+    (make-pathname :type (pathname-type sb-ext:*runtime-pathname*)))
   "This pathname is merged with the output parameter to produce the
   final output executable name. It's meant to automatically include
   the executable suffix .EXE on Windows.")

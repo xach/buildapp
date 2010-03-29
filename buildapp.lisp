@@ -34,8 +34,8 @@
   (let* ((runtime-symbol (find-symbol "*RUNTIME-PATHNAME*" '#:sb-ext))
          (template (if runtime-symbol
                        (symbol-value runtime-symbol)
-                       "buildapp")))
-    (make-pathname :type (pathname-type sb-ext:*runtime-pathname*)))
+                       #p"buildapp")))
+    (make-pathname :type (pathname-type template)))
   "This pathname is merged with the output parameter to produce the
   final output executable name. It's meant to automatically include
   the executable suffix .EXE on Windows.")

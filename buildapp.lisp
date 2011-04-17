@@ -95,9 +95,13 @@ Load path flags:
   --asdf-tree DIRECTORY     When handling a --load-system, search DIRECTORY
                               and all its subdirectories for ASDF system
                               files to load
+  --asdf-manifest FILE      When handling a --load-system, use only .asd
+                              files listed in FILE.
 
 There may be any number of load-path/asdf-path/asdf-tree
 flags. asdf-path arguments take precedence over asdf-tree arguments.
+Only one asdf-manifest is allowed and it overrides all other --asdf-*
+arguments.
 
 Other flags:
   --help                    Show this usage message
@@ -263,13 +267,16 @@ it. If an exact filename is not found, file.lisp is also tried."
            `(require ',(make-symbol (string-upcase object)))))))
 
 (defun dumper-action-form (dumper)
-  (let ((forms (dumper-action-forms dumper)))
-    (if (needs-asdf-p dumper)
-        `(let ((asdf:*central-registry* (list* ,@(asdf-system-directories
-                                                  dumper)
-                                               asdf:*central-registry*)))
-           ,@forms)
-        `(progn ,@forms))))
+  (let ((header
+         (cond
+           ((asdf-manifest dumper)
+            '(let ((asdf:*system-definition-search-functions* '(find-in-manifest)))))
+           ((needs-asdf-p dumper)
+            `(let ((asdf:*central-registry* (list* ,@(asdf-system-directories
+                                                      dumper)
+                                                   asdf:*central-registry*)))))
+           (t '(progn)))))
+    `(,@header ,@(dumper-action-forms dumper))))
 
 (defun dumpfile-forms (dumper)
   "Return a list of forms to be saved to a dumpfile."
@@ -277,7 +284,8 @@ it. If an exact filename is not found, file.lisp is also tried."
          (output (merge-pathnames (output dumper) *output-type-pathname*))
          (entry-function-form
           (entry-function-form dumper))
-         (asdf (needs-asdf-p dumper)))
+         (asdf (needs-asdf-p dumper))
+         (asdf-manifest (asdf-manifest dumper)))
     `((cl:defpackage ,package
         (:use #:cl))
       (cl:in-package ,package)
@@ -307,6 +315,19 @@ it. If an exact filename is not found, file.lisp is also tried."
       ,@(when asdf
               `((require '#:asdf)
                 ,(dump-form 'asdf-ops)))
+
+      ,@(when asdf-manifest
+              `((let ((table 
+                          (loop with table = (make-hash-table :test 'equal)
+                             for (name . asd) in 
+                               ',(with-open-file (in asdf-manifest)
+                                                 (loop for line = (read-line in nil nil)
+                                                    while line collect (cons (pathname-name line) line)))
+                             do (setf (gethash name table) asd)
+                             finally (return table))))
+                  (defun find-in-manifest (sys) 
+                    (gethash sys table)))))
+
       ,(dump-form 'file-ops)
       ,@(mapcar (lambda (path)
                   `(push ,(directorize path) *load-search-paths))

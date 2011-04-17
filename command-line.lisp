@@ -82,6 +82,10 @@
   ()
   (:report "Cannot specify both --entry and --dispatched-entry"))
 
+(define-condition incompatible-asdf-args (provided-argument-error)
+  ()
+  (:report "Cannot combine --asdf-tree or --asdf-path with --asdf-manifest"))
+
 (defun argument-keyword (argument)
   "Convert a command-line argument to a keyword symbol."
   (find-symbol (string-upcase (subseq argument 2)) :keyword))
@@ -105,9 +109,19 @@
           ((:load :load-system :require :eval)
            (push (list keyword value) (actions plan)))
           (:asdf-path
+           (when (asdf-manifest plan)
+             (error 'incompatible-asdf-args))
            (push value (asdf-paths plan)))
           (:asdf-tree
+           (when (asdf-manifest plan)
+             (error 'incompatible-asdf-args))
            (push value (asdf-trees plan)))
+          (:asdf-manifest
+           (when (or (asdf-paths plan) (asdf-trees plan))
+             (error 'incompatible-asdf-args))
+           (when (asdf-manifest plan)
+             (error 'duplicate-argument :flag argument))
+           (setf (asdf-manifest plan) value))
           (:load-path
            (push value (load-paths plan)))
           (:output

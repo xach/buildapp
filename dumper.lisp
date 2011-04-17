@@ -55,6 +55,10 @@
     :initarg :asdf-trees
     :accessor asdf-trees
     :initform nil)
+   (asdf-manifest
+    :initarg :asdf-manifest
+    :accessor asdf-manifest
+    :initform nil)
    (load-paths
     :initarg :load-paths
     :accessor load-paths

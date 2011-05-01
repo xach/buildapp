@@ -1,0 +1,7 @@
+Buildapp is an application for SBCL that configures and saves an
+executable Common Lisp image.
+
+It was created by Zach Beane <xach@xach.com> and is available under a
+BSD license; see the file LICENSE for details.
+
+For full documentation, see doc/index.html.

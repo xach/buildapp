@@ -433,14 +433,18 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
   output file writable? Does this version of sbcl support the
   required <tt>:save-runtime-options</tt> argument?
 
-<li>The dumpfile performs the eval/load/load-system/require actions.
+<li>The dumpfile performs the eval/load/load-system/require
+  actions. Each operation is evaluated with a fresh binding
+  of <tt>sb-ext:*invoke-debugger-hook*</tt> to the buildap debugger
+  function. If the binding is modified, the new value is saved.
 
 <li>The dumpfile clears itself out of the environment:
 
 <ul>
 <li> Remove extra ASDF methods
  with <a href='http://l1sp.org/cl/remove-method'><tt>remove-method</tt></a>
-<li> Reset <tt>sb-ext:*invoke-debugger-hook*</tt> to NIL
+<li> Reset <tt>sb-ext:*invoke-debugger-hook*</tt> to the saved value
+  or NIL if no value was saved.
 <li> Delete the dumpfile package
  with <a href='http://l1sp.org/cl/delete-package'><tt>delete-package</tt></a>
 </ul>
@@ -453,21 +457,12 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
 <li> It deletes the dumpfile.
 </ol>
 
-<p>There are two things to keep in mind to avoid conflicts with
-  buildapp's implementation strategy:
-
-<ul>
-<li> <tt>sb-ext:*invoke-debugger-hook*</tt> is set to NIL before
-  saving the image, so any changes to the variable must be done at
-  application startup time (via your <tt>--entry</tt> function
-  or <tt>sb-ext:*init-hooks*</tt>) instead of application load time
-<li> The ASDF central registry is temporarily extended with
+<p> The ASDF central registry is temporarily extended with
   the <tt>--asdf-path</tt> and <tt>--asdf-tree</tt> arguments at load
   time, and reverts back to the default central registry value after
-  that; changes to the central registry should be done at startup time
-  instead of application load time 
-</ul>
-
+  that. To avoid conflicts with this behavior, changes to the central
+  registry should be done at startup time instead of application load
+  time.
 
 
 <a name='feedback'><h2>Feedback</h2></a>

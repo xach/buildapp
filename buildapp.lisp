@@ -262,8 +262,18 @@ it. If an exact filename is not found, file.lisp is also tried."
           (:require
            `(require ',(make-symbol (string-upcase object)))))))
 
+(defun invoke-debugger-hook-wrapper (form)
+  `(let ((previous-hook sb-ext:*invoke-debugger-hook*)
+         (sb-ext:*invoke-debugger-hook*
+          sb-ext:*invoke-debugger-hook*))
+     (progn ,form)
+     (unless (eql sb-ext:*invoke-debugger-hook* previous-hook)
+       (setf *post-invoke-debugger-hook*
+             sb-ext:*invoke-debugger-hook*))))
+
 (defun dumper-action-form (dumper)
-  (let ((forms (dumper-action-forms dumper)))
+  (let ((forms (mapcar 'invoke-debugger-hook-wrapper
+                       (dumper-action-forms dumper))))
     (if (needs-asdf-p dumper)
         `(let ((asdf:*central-registry* (list* ,@(asdf-system-directories
                                                   dumper)
@@ -281,6 +291,7 @@ it. If an exact filename is not found, file.lisp is also tried."
     `((cl:defpackage ,package
         (:use #:cl))
       (cl:in-package ,package)
+      (defparameter *post-invoke-debugger-hook* nil)
       (defparameter *system-load-output* *standard-output*)
       (defvar *logfile-output*)
       ,(dump-form 'debugger)
@@ -319,8 +330,8 @@ it. If an exact filename is not found, file.lisp is also tried."
                     (entry-function-check-form dumper)))
       (ignore-errors (close *logfile-output*))
       ;; Remove buildapp artifacts from the system
+      (setf sb-ext:*invoke-debugger-hook* *post-invoke-debugger-hook*)
       (in-package #:cl-user)
-      (setf sb-ext:*invoke-debugger-hook* nil)
       (delete-package ',package)
       (sb-ext:gc :full t)
       (sb-ext:save-lisp-and-die

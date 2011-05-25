@@ -334,7 +334,7 @@ it. If an exact filename is not found, file.lisp is also tried."
                       asdf:*system-definition-search-functions*)))
       ,(dump-form 'file-ops)
       ,@(mapcar (lambda (path)
-                  `(push ,(directorize path) *load-search-paths))
+                  `(push ,(directorize path) *load-search-paths*))
                 (load-paths dumper))
       ,(dumper-action-form dumper)
       ,@(when asdf

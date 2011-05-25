@@ -29,8 +29,10 @@
 ;;;; buildapp.asd
 
 (asdf:defsystem #:buildapp
+  :description "Buildapp is an application for SBCL that configures
+  and saves an executable Common Lisp image."
   :author "Zach Beane <xach@xach.com>"
-  :version "1.2"
+  :version "1.3"
   :serial t
   :components ((:file "package")
                (:file "utils")

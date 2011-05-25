@@ -95,6 +95,7 @@
       (when (endp args)
         (unless (output plan)
           (error 'missing-output-argument))
+        (setf (asdf-directives plan) (reverse (asdf-directives plan)))
         (return plan))
       (let* ((argument (pop args))
              (value (pop args))
@@ -104,10 +105,12 @@
         (case keyword
           ((:load :load-system :require :eval)
            (push (list keyword value) (actions plan)))
-          (:asdf-path
-           (push value (asdf-paths plan)))
-          (:asdf-tree
-           (push value (asdf-trees plan)))
+          ((:manifest-file :asdf-path :asdf-tree)
+           (let ((pathname (probe-file value)))
+             (unless pathname
+               (error "Invalid pathname given to ~A -- ~S"
+                      argument value))
+             (push (list keyword value) (asdf-directives plan))))
           (:load-path
            (push value (load-paths plan)))
           (:output

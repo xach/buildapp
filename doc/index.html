@@ -349,9 +349,12 @@ Load path flags:
   --asdf-tree DIRECTORY     When handling a --load-system, search DIRECTORY
                               and all its subdirectories for ASDF system
                               files to load
+  --manifest-file FILE      When handling a --load-system, read a list of
+                              ASDF system file pathnames from FILE as
+                              possible matching systems.
 
-There may be any number of load-path/asdf-path/asdf-tree
-flags. asdf-path arguments take precedence over asdf-tree arguments.
+There may be any number of load-path/asdf-path/asdf-tree/manifest-file
+flags. They take priority in command-line order.
 
 Other flags:
   --help                    Show this usage message

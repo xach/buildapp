@@ -95,9 +95,12 @@ Load path flags:
   --asdf-tree DIRECTORY     When handling a --load-system, search DIRECTORY
                               and all its subdirectories for ASDF system
                               files to load
+  --manifest-file FILE      When handling a --load-system, read a list of
+                              ASDF system file pathnames from FILE as
+                              possible matching systems.
 
-There may be any number of load-path/asdf-path/asdf-tree
-flags. asdf-path arguments take precedence over asdf-tree arguments.
+There may be any number of load-path/asdf-path/asdf-tree/manifest-file
+flags. They take priority in command-line order.
 
 Other flags:
   --help                    Show this usage message
@@ -202,6 +205,18 @@ manual."
         (zap-method #'asdf:perform '(asdf:load-op asdf:system))
         (zap-method #'asdf::traverse '(asdf:load-op asdf:system))))
 
+
+    (defun system-search-table (&rest pathnames)
+      (let ((table (make-hash-table :test 'equalp)))
+        (dolist (pathname pathnames table)
+          (setf (gethash (pathname-name pathname) table)
+                (probe-file pathname)))))
+
+    (defvar *asdf-systems-table*)
+
+    (defun system-search-function (name)
+      (gethash name *asdf-systems-table*))
+
     (defun load-system (name)
       "Load ASDF system identified by NAME."
       (let ((*standard-output* *logfile-output*)
@@ -274,12 +289,7 @@ it. If an exact filename is not found, file.lisp is also tried."
 (defun dumper-action-form (dumper)
   (let ((forms (mapcar 'invoke-debugger-hook-wrapper
                        (dumper-action-forms dumper))))
-    (if (needs-asdf-p dumper)
-        `(let ((asdf:*central-registry* (list* ,@(asdf-system-directories
-                                                  dumper)
-                                               asdf:*central-registry*)))
-           ,@forms)
-        `(progn ,@forms))))
+    `(progn ,@forms)))
 
 (defun dumpfile-forms (dumper)
   "Return a list of forms to be saved to a dumpfile."
@@ -317,7 +327,11 @@ it. If an exact filename is not found, file.lisp is also tried."
         (write-line "buildapp write check" stream))
       ,@(when asdf
               `((require '#:asdf)
-                ,(dump-form 'asdf-ops)))
+                ,(dump-form 'asdf-ops)
+                (setf *asdf-systems-table*
+                      (system-search-table ,@(asdf-system-files dumper)))
+                (push 'system-search-function
+                      asdf:*system-definition-search-functions*)))
       ,(dump-form 'file-ops)
       ,@(mapcar (lambda (path)
                   `(push ,(directorize path) *load-search-paths))
@@ -331,6 +345,9 @@ it. If an exact filename is not found, file.lisp is also tried."
       (ignore-errors (close *logfile-output*))
       ;; Remove buildapp artifacts from the system
       (setf sb-ext:*invoke-debugger-hook* *post-invoke-debugger-hook*)
+      (setf asdf:*system-definition-search-functions*
+            (remove 'system-search-function
+                    asdf:*system-definition-search-functions*))
       (in-package #:cl-user)
       (delete-package ',package)
       (sb-ext:gc :full t)

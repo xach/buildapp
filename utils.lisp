@@ -161,3 +161,8 @@ location."
                                    :if-exists if-exists)
       (loop for char = (read-char input-stream nil)
             while char do (write-char char output-stream)))))
+
+(defun file-lines (file)
+  (with-open-file (stream file)
+    (loop for line = (read-line stream nil)
+          while line collect line)))

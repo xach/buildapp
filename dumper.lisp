@@ -47,13 +47,9 @@
     :initarg :dispatched-entries
     :accessor dispatched-entries
     :initform nil)
-   (asdf-paths
-    :initarg :asdf-paths
-    :accessor asdf-paths
-    :initform nil)
-   (asdf-trees
-    :initarg :asdf-trees
-    :accessor asdf-trees
+   (asdf-directives
+    :initarg :asdf-directives
+    :accessor asdf-directives
     :initform nil)
    (load-paths
     :initarg :load-paths
@@ -86,12 +82,9 @@
             (output dumper)
             (entry dumper))))
 
-(defgeneric asdf-system-directories (dumper)
+(defgeneric asdf-system-files (dumper)
   (:method (dumper)
-    (let ((result (mapcar #'directorize (asdf-paths dumper))))
-      (dolist (root (asdf-trees dumper) (nreverse result))
-        (dolist (directory (all-asdf-directories root))
-          (pushnew directory result :test #'string=))))))
+    (asdf-directive-files (asdf-directives dumper))))
 
 (defun dispatched-entry-form (dispatched-entries)
   (let ((default nil))

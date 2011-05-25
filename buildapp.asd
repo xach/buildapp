@@ -34,6 +34,7 @@
   :serial t
   :components ((:file "package")
                (:file "utils")
+               (:file "asdf-files")
                (:file "dumper")
                (:file "command-line")
                (:file "buildapp")))

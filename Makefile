@@ -1,7 +1,7 @@
 DESTDIR = /usr/local
 
 buildapp: command-line.lisp utils.lisp buildapp.lisp dumper.lisp package.lisp
-	sbcl --noinform --no-userinit --no-sysinit \
+	sbcl --disable-debugger --noinform --no-userinit --no-sysinit \
 	  --eval "(require 'asdf)" \
 	  --eval "(require 'buildapp)" \
           --eval "(buildapp::build-buildapp)" \

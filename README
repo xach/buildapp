@@ -1,5 +1,5 @@
 Buildapp is an application for SBCL that configures and saves an
-executable Common Lisp image.
+executable Common Lisp image or non-executable core.
 
 It was created by Zach Beane <xach@xach.com> and is available under a
 BSD license; see the file LICENSE for details.

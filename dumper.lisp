@@ -70,6 +70,10 @@
    (dumpfile-copy
     :initarg :dumpfile-copy
     :accessor dumpfile-copy
+    :initform nil)
+   (core-only
+    :initarg :core-only
+    :accessor core-only
     :initform nil)))
 
 (defgeneric needs-asdf-p (dumper)

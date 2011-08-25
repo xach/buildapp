@@ -103,6 +103,7 @@ There may be any number of load-path/asdf-path/asdf-tree/manifest-file
 flags. They take priority in command-line order.
 
 Other flags:
+  --core-only               Make a core file only, not an executable
   --help                    Show this usage message
   --logfile FILE            Log compilation and load output to FILE
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
@@ -354,8 +355,9 @@ it. If an exact filename is not found, file.lisp is also tried."
       (sb-ext:gc :full t)
       (sb-ext:save-lisp-and-die
        ,output
-       :executable t
-       :save-runtime-options t
+       ,@(unless (core-only dumper)
+                 '(:executable t
+                   :save-runtime-options t))
        ,@(when entry-function-form
                (list :toplevel
                      entry-function-form))))))
@@ -392,6 +394,7 @@ ARGV. See *USAGE* for details."
                                        "--disable-debugger"
                                        "--no-userinit"
                                        "--no-sysinit"
+                                       "--disable-debugger"
                                        "--load" (sb-ext:native-namestring
                                                  (probe-file file)))
                                  :output *standard-output*

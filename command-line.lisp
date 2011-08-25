@@ -87,10 +87,12 @@
   (find-symbol (string-upcase (subseq argument 2)) :keyword))
 
 (defun command-line-dumper (args)
-  (when (oddp (length args))
-    (error 'odd-number-of-arguments))
   (let ((plan (make-instance 'dumper))
         (default-dispatched-entry nil))
+    (when (find "--core-only" args :test 'string=)
+      (setf args (remove "--core-only" args :test 'string=)))
+    (when (oddp (length args))
+      (error 'odd-number-of-arguments))
     (loop
       (when (endp args)
         (unless (output plan)
@@ -142,6 +144,8 @@
                           :flag (format nil "~A ~A" argument value))
                    (setf default-dispatched-entry entry)))
              (push entry (dispatched-entries plan))))
+          (:core-only
+           (setf (core-only plan) t))
           (t
            (error 'unknown-argument :flag argument)))))))
 

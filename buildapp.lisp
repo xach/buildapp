@@ -389,6 +389,7 @@ ARGV. See *USAGE* for details."
       (let ((process
              (sb-ext:run-program (sbcl dumper)
                                  (list "--noinform"
+                                       "--disable-debugger"
                                        "--no-userinit"
                                        "--no-sysinit"
                                        "--load" (sb-ext:native-namestring

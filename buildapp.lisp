@@ -345,19 +345,20 @@ it. If an exact filename is not found, file.lisp is also tried."
       (ignore-errors (close *logfile-output*))
       ;; Remove buildapp artifacts from the system
       (setf sb-ext:*invoke-debugger-hook* *post-invoke-debugger-hook*)
-      (setf asdf:*system-definition-search-functions*
-            (remove 'system-search-function
-                    asdf:*system-definition-search-functions*))
+      ,@(when asdf
+              '((setf asdf:*system-definition-search-functions*
+                 (remove 'system-search-function
+                  asdf:*system-definition-search-functions*))))
       (in-package #:cl-user)
       (delete-package ',package)
       (sb-ext:gc :full t)
       (sb-ext:save-lisp-and-die
-        ,output
-        :executable t
-        :save-runtime-options t
-        ,@(when entry-function-form
-                (list :toplevel
-                      entry-function-form))))))
+       ,output
+       :executable t
+       :save-runtime-options t
+       ,@(when entry-function-form
+               (list :toplevel
+                     entry-function-form))))))
 
 (defun write-dumpfile (dumper stream)
   (let ((*print-case* :downcase))

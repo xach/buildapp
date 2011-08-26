@@ -90,6 +90,7 @@
   (let ((plan (make-instance 'dumper))
         (default-dispatched-entry nil))
     (when (find "--core-only" args :test 'string=)
+      (setf (core-only plan) t)
       (setf args (remove "--core-only" args :test 'string=)))
     (when (oddp (length args))
       (error 'odd-number-of-arguments))

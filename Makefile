@@ -11,4 +11,5 @@ clean:
 	rm -f buildapp *~ *.fasl
 
 install: buildapp
+	install -d -m 755 ${DESTDIR}/bin
 	install -c -m 555 buildapp ${DESTDIR}/bin/buildapp

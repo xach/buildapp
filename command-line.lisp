@@ -86,12 +86,22 @@
   "Convert a command-line argument to a keyword symbol."
   (find-symbol (string-upcase (subseq argument 2)) :keyword))
 
+(defmacro popflag (flag args)
+  (let ((flag- (gensym))
+        (value (gensym)))
+    `(let ((,flag- ,flag))
+       (let ((,value (find ,flag- ,args :test 'string-equal)))
+         (when ,value
+           (setf ,args (remove ,flag- ,args :Test 'string-equal))
+           t)))))
+
 (defun command-line-dumper (args)
   (let ((plan (make-instance 'dumper))
         (default-dispatched-entry nil))
-    (when (find "--core-only" args :test 'string=)
-      (setf (core-only plan) t)
-      (setf args (remove "--core-only" args :test 'string=)))
+    (when (popflag "--compress-core" args)
+      (setf (compress-core plan) t))
+    (when (popflag "--core-only" args)
+      (setf (core-only plan) t))
     (when (oddp (length args))
       (error 'odd-number-of-arguments))
     (loop

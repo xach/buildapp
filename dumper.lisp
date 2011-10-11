@@ -74,6 +74,10 @@
    (core-only
     :initarg :core-only
     :accessor core-only
+    :initform nil)
+   (compress-core
+    :initarg :compress-core
+    :accessor compress-core
     :initform nil)))
 
 (defgeneric needs-asdf-p (dumper)

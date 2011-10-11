@@ -358,6 +358,8 @@ it. If an exact filename is not found, file.lisp is also tried."
        ,@(unless (core-only dumper)
                  '(:executable t
                    :save-runtime-options t))
+       ,@(when (compress-core dumper)
+               '(:compression t))
        ,@(when entry-function-form
                (list :toplevel
                      entry-function-form))))))

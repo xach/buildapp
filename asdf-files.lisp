@@ -3,9 +3,15 @@
 (in-package #:buildapp)
 
 (defun manifest-file-files (file)
-  (remove-if #'null
-             (mapcar #'probe-file
-                     (file-lines file))))
+  "Return a list of all system files contained in FILE. The syntax is
+one namestring per line. Relative namestrings are resolved relative to
+the truename of FILE."
+  (let ((truename (truename file)))
+    (remove-if #'null
+               (mapcar (lambda (namestring)
+                         (probe-file (merge-pathnames namestring
+                                                      truename)))
+                       (file-lines file)))))
 
 (defun asdf-path-files (pathname)
   (directory (merge-pathnames "*.asd" pathname)))

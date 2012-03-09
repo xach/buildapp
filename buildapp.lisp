@@ -320,6 +320,9 @@ it. If an exact filename is not found, file.lisp is also tried."
       (unless (find-symbol "SAVE-RUNTIME-OPTIONS" '#:sb-impl)
         (error "This SBCL, ~A, does not support :SAVE-RUNTIME-OPTIONS"
                (lisp-implementation-version)))
+      ,@(when (compress-core dumper)
+              `((unless (member :sb-core-compression *features*)
+                  (error "This SBCL does not support core compression"))))
       ;; Check for writability to the output file
       (with-open-file (stream ,(output dumper)
                               :direction :output

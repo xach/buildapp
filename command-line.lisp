@@ -155,8 +155,8 @@
                           :flag (format nil "~A ~A" argument value))
                    (setf default-dispatched-entry entry)))
              (push entry (dispatched-entries plan))))
-          (:core-only
-           (setf (core-only plan) t))
+          (:dynamic-space-size
+           (setf (dynamic-space-size plan) (parse-integer value)))
           (t
            (error 'unknown-argument :flag argument)))))))
 

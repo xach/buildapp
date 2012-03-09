@@ -78,6 +78,10 @@
    (compress-core
     :initarg :compress-core
     :accessor compress-core
+    :initform nil)
+   (dynamic-space-size
+    :initarg :dynamic-space-size
+    :accessor dynamic-space-size
     :initform nil)))
 
 (defgeneric needs-asdf-p (dumper)

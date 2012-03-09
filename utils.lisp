@@ -166,3 +166,17 @@ location."
   (with-open-file (stream file)
     (loop for line = (read-line stream nil)
           while line collect line)))
+
+;; Cribbed from alexandria
+(defun flatten (tree)
+  "Traverses the tree in order, collecting non-null leaves into a list."
+  (let (list)
+    (labels ((traverse (subtree)
+               (when subtree
+                 (if (consp subtree)
+                     (progn
+                       (traverse (car subtree))
+                       (traverse (cdr subtree)))
+                     (push subtree list)))))
+      (traverse tree))
+    (nreverse list)))

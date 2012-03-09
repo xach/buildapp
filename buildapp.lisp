@@ -103,7 +103,11 @@ There may be any number of load-path/asdf-path/asdf-tree/manifest-file
 flags. They take priority in command-line order.
 
 Other flags:
+  --compress-core           Compress the core or executable; requires
+                              configuration support in SBCL
   --core-only               Make a core file only, not an executable
+  --dynamic-space-size MB   Pass a --dynamic-space-size option to SBCL
+                              when building; value is megabytes
   --help                    Show this usage message
   --logfile FILE            Log compilation and load output to FILE
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
@@ -386,8 +390,9 @@ ARGV. See *USAGE* for details."
   (when (string-equal (second argv) "--help")
     (write-string *usage* *standard-output*)
     (sb-ext:quit))
-  (let ((dumper (command-line-dumper (rest argv)))
-        (*package* (find-package :buildapp)))
+  (let* ((dumper (command-line-dumper (rest argv)))
+         (*package* (find-package :buildapp))
+         (dynamic-space-size (dynamic-space-size dumper)))
     (with-tempfile (stream ("dumper.lisp" file))
       (write-dumpfile dumper stream)
       (force-output stream)
@@ -395,13 +400,19 @@ ARGV. See *USAGE* for details."
         (copy-file file (dumpfile-copy dumper)))
       (let ((process
              (sb-ext:run-program (sbcl dumper)
-                                 (list "--noinform"
-                                       "--disable-debugger"
-                                       "--no-userinit"
-                                       "--no-sysinit"
-                                       "--disable-debugger"
-                                       "--load" (sb-ext:native-namestring
-                                                 (probe-file file)))
+                                 (flatten
+                                  (list
+                                   (when dynamic-space-size
+                                     (list "--dynamic-space-size"
+                                           (princ-to-string
+                                            dynamic-space-size)))
+                                   "--noinform"
+                                   "--disable-debugger"
+                                   "--no-userinit"
+                                   "--no-sysinit"
+                                   "--disable-debugger"
+                                   "--load" (sb-ext:native-namestring
+                                             (probe-file file))))
                                  :output *standard-output*
                                  :search t)))
         (let ((status (sb-ext:process-exit-code process)))

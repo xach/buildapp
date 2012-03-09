@@ -358,7 +358,11 @@ There may be any number of load-path/asdf-path/asdf-tree/manifest-file
 flags. They take priority in command-line order.
 
 Other flags:
+  --compress-core           Compress the core or executable; requires
+                              configuration support in SBCL
   --core-only               Make a core file only, not an executable
+  --dynamic-space-size MB   Pass a --dynamic-space-size option to SBCL
+                              when building; value is megabytes
   --help                    Show this usage message
   --logfile FILE            Log compilation and load output to FILE
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program

@@ -333,6 +333,7 @@ it. If an exact filename is not found, file.lisp is also tried."
                               :if-does-not-exist :create
                               :if-exists :append)
         (write-line "buildapp write check" stream))
+      (delete-file ,(output dumper))
       ,@(when asdf
               `((require '#:asdf)
                 ,(dump-form 'asdf-ops)

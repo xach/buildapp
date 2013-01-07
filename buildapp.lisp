@@ -166,7 +166,7 @@ buildapp application."
     (defparameter *traversal-parents* nil)
 
     (defmethod asdf::traverse :around ((operation asdf:load-op)
-                                       (system asdf:system))
+                                       (system asdf:system) #+asdf2.27 &key)
       "Gather some relationship information about systems."
       (if *load-system*
           (progn

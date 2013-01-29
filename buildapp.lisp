@@ -144,7 +144,7 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
     (format *system-load-output* "~&Fatal ~A:~%  ~A~%"
             (type-of condition) condition)
     (print (sb-debug:backtrace-as-list) *logfile-output*)
-    (sb-ext:quit :unix-status 111)))
+    (sb-ext:exit :code 111)))
 
 (defun command-line-debugger (condition previous-hook)
   "The function to call if there are errors in the command-line
@@ -157,7 +157,7 @@ buildapp application."
       (terpri *error-output*)
       (write-string *short-usage* *error-output*)))
   (print (sb-debug:backtrace-as-list) *logfile-output*)
-  (sb-ext:quit :unix-status 1))
+  (sb-ext:exit :code 1))
 
 (dumpable asdf-ops
   (progn
@@ -390,7 +390,7 @@ it. If an exact filename is not found, file.lisp is also tried."
 ARGV. See *USAGE* for details."
   (when (string-equal (second argv) "--help")
     (write-string *usage* *standard-output*)
-    (sb-ext:quit))
+    (sb-ext:exit))
   (let* ((dumper (command-line-dumper (rest argv)))
          (*package* (find-package :buildapp))
          (dynamic-space-size (dynamic-space-size dumper)))

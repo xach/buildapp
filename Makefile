@@ -5,7 +5,7 @@ buildapp: command-line.lisp utils.lisp buildapp.lisp dumper.lisp package.lisp
 	  --eval "(require 'asdf)" \
 	  --eval "(require 'buildapp)" \
           --eval "(buildapp::build-buildapp)" \
-          --eval "(quit)"
+          --eval "(exit)"
 
 clean:
 	rm -f buildapp *~ *.fasl

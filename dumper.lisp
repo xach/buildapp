@@ -120,7 +120,7 @@
                      (list
                       `(format *error-output* "Unknown dispatch name '~A', quitting~%"
                                binary-name)
-                      '(sb-ext:quit :unix-status 1))))))))))
+                      '(sb-ext:exit :code 1))))))))))
 
 (defgeneric entry-function-form (dumper)
   (:method (dumper)

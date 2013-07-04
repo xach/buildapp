@@ -161,56 +161,6 @@ buildapp application."
 
 (dumpable asdf-ops
   (progn
-    (defparameter *load-system* nil)
-    (defparameter *traversal-parent* nil)
-    (defparameter *traversal-parents* nil)
-
-    (defmethod asdf::traverse :around ((operation asdf:load-op)
-                                       (system asdf:system))
-      "Gather some relationship information about systems."
-      (if *load-system*
-          (progn
-            (when *traversal-parent*
-              (push *traversal-parent* (gethash system *traversal-parents* nil)))
-            (let ((*traversal-parent* system))
-              (call-next-method)))
-          (call-next-method)))
-
-    (defmethod asdf:perform :around ((operation asdf:load-op)
-                                     (system asdf:system))
-      "Display terse information about loading systems."
-      (if *load-system*
-          (let ((parents (gethash system *traversal-parents*)))
-            (format *system-load-output*
-                    ";; loading system ~A ~@[(needed by ~{~A~^, ~})~]~%;;  from ~A~%"
-                    (asdf:component-name system)
-                    (mapcar #'asdf:component-name parents)
-                    (asdf:component-pathname system))
-            (force-output *system-load-output*)
-            (call-next-method))
-          (call-next-method)))
-
-    (defmethod asdf:perform :around ((operation asdf:load-op)
-                                     (component asdf:cl-source-file))
-      "Try recompiling stale FASLs once before erroring. From the SBCL
-manual."
-      (handler-case (call-next-method operation component)
-        (sb-ext:invalid-fasl ()
-          (asdf:perform (make-instance 'asdf:compile-op) component)
-          (call-next-method))))
-
-    (defun remove-dumper-methods ()
-      "Remove any methods added to ASDF GFs as part of the dump process."
-      (flet ((zap-method (gf argtypes)
-               (let ((method (find-method gf '(:around)
-                                          (mapcar #'find-class argtypes))))
-                 (when method
-                   (remove-method gf method)))))
-        (zap-method #'asdf:perform '(asdf:load-op asdf:cl-source-file))
-        (zap-method #'asdf:perform '(asdf:load-op asdf:system))
-        (zap-method #'asdf::traverse '(asdf:load-op asdf:system))))
-
-
     (defun system-search-table (&rest pathnames)
       (let ((table (make-hash-table :test 'equalp)))
         (dolist (pathname pathnames table)
@@ -227,9 +177,7 @@ manual."
       (let ((*standard-output* *logfile-output*)
             (*error-output* *logfile-output*)
             (*compile-verbose* t)
-            (*compile-print* t)
-            (*load-system* t)
-            (*traversal-parents* (make-hash-table)))
+            (*compile-print* t))
         (handler-bind
             ((warning
               (lambda (condition)
@@ -238,6 +186,7 @@ manual."
                     (error "Compilation failed: ~A in ~A"
                            condition
                            *compile-file-truename*))))))
+          (format *system-load-output* ";; loading system ~S~%" name)
           (asdf:oos 'asdf:load-op name)
           t)))
     ))
@@ -346,8 +295,6 @@ it. If an exact filename is not found, file.lisp is also tried."
                   `(push ,(directorize path) *load-search-paths*))
                 (load-paths dumper))
       ,(dumper-action-form dumper)
-      ,@(when asdf
-              '((remove-dumper-methods)))
       ,@(when entry-function-form
               (list (dump-form 'check-pseudosymbol)
                     (entry-function-check-form dumper)))

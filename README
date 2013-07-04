@@ -4,4 +4,9 @@ executable Common Lisp image or non-executable core.
 It was created by Zach Beane <xach@xach.com> and is available under a
 BSD license; see the file LICENSE for details.
 
-For full documentation, see doc/index.html.
+For full documentation, see http://www.xach.com/lisp/buildapp/ or
+doc/index.html.
+
+
+
+

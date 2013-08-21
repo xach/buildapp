@@ -59,6 +59,10 @@
     :initarg :sbcl
     :accessor sbcl
     :initform "sbcl")
+   (ccl
+    :initarg :ccl
+    :accessor ccl
+    :initform "ccl")
    (output
     :initarg :output
     :accessor output
@@ -103,7 +107,7 @@
     (flet ((one-clause (entry)
              (let* ((binary-name (binary-name entry))
                     (entry-function (entry entry))
-                    (call `(,entry-function sb-ext:*posix-argv*)))
+                    (call `(,entry-function ,(get-args))))
                (if (default-entry-p entry)
                    (progn (setf default entry) nil)
                    (list
@@ -112,23 +116,22 @@
       `(with-simple-restart (abort "Exit application")
          (lambda ()
            (block nil
-             (let ((binary-name (pathname-name (pathname (first sb-ext:*posix-argv*)))))
+             (let ((binary-name (pathname-name (pathname (first ,(get-args))))))
                (cond ,@(mapcan #'one-clause dispatched-entries))
                ,@(if default
                      (list
-                      `(,(entry default) sb-ext:*posix-argv*))
+                      `(,(entry default) ,(get-args)))
                      (list
                       `(format *error-output* "Unknown dispatch name '~A', quitting~%"
                                binary-name)
-                      '(sb-ext:exit :code 1))))))))))
+                      (macroexpand-1 (quit 1)))))))))))
 
 (defgeneric entry-function-form (dumper)
   (:method (dumper)
     (cond ((entry dumper)
            `(lambda ()
               (with-simple-restart (abort "Exit application")
-                (,(entry dumper)
-                 sb-ext:*posix-argv*))))
+                (,(entry dumper) ,(get-args)))))
           ((dispatched-entries dumper)
            (dispatched-entry-form (dispatched-entries dumper))))))
 

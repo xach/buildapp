@@ -30,6 +30,35 @@
 
 (in-package #:buildapp)
 
+;;; interoperability
+(defun get-args ()
+  #+sbcl 'sb-ext:*posix-argv*
+  #+ccl  '(ccl::command-line-arguments))
+
+(defmacro backtrace-as-list ()
+  #+sbcl '(sb-debug:backtrace-as-list)
+  #+ccl  '(ccl::backtrace-as-list))
+
+(defmacro quit (&optional (errno 0))
+  #+sbcl `(sb-ext:exit :code ,errno)
+  #+ccl  `(ccl:quit ,errno))
+
+(defmacro run-program (program args)
+  (let ((func   #+sbcl 'sb-ext:run-program
+                #+ccl  'ccl:run-program)
+        (search #+sbcl '(:search t)))
+    `(,func ,program ,args
+            :input nil
+            :output *standard-output*
+            ,@search)))
+
+(defun native-namestring (namestring)
+  (let ((p (pathname namestring)))
+    #+sbcl (sb-ext:native-namestring p)
+    ;; adapted the following line from asdf.lisp
+    #+ccl  (let ((*default-pathname-defaults* #p"/"))
+             (ccl:native-translated-namestring p))))
+
 (defparameter *alphabet*
   (concatenate 'string
                "abcdefghijklmnopqrstuvwxyz"

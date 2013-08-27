@@ -2,15 +2,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link rel='stylesheet' type='text/css' href='style.css'>
-    <title>Buildapp - Create executables with SBCL</title>
+    <title>Buildapp - Create executables with SBCL or CCL</title>
     </head>
   <body>
 
 <div id='content'>
- <h2>Buildapp - Create executables with SBCL</h2>
+ <h2>Buildapp - Create executables with SBCL or CCL</h2>
 
 <div id='summary'>
- <p>Buildapp is an application for SBCL that configures and saves an
+ <p>Buildapp is an application for SBCL or CCL that configures and saves an
    executable Common Lisp image. It is similar
    to <a href='http://www.cliki.net/cl-launch'>cl-launch</a> and
    hu.dwim.build. Buildapp is available under
@@ -416,10 +416,12 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
 <li>It creates a new Lisp file (the <i>dumpfile</i>) with all the
   commands needed to implement the command-line options.
 
-<li>It runs "sbcl"
-  with <a href='http://l1sp.org/sbcl/sb-ext:run-program'><tt>run-program</tt></a>. sbcl
-  is invoked with no init files (it doesn't read user or system
-  sbcl rc files) and loads the dumpfile:
+<li>It runs either "sbcl"
+  with <a href='http://l1sp.org/sbcl/sb-ext:run-program'><tt>sb-ext:run-program</tt></a>
+  or "ccl" with
+  <a href='http://ccl.clozure.com/ccl-documentation.html#External-Program-Dictionary'><tt>ccl:run-program</tt></a>.
+  In either case lisp is invoked with no init files (it doesn't read
+  user or system rc files) and loads the dumpfile:
 
 <ol>
 
@@ -430,11 +432,13 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
 <li> The debugger is changed
   with <a href='http://l1sp.org/sbcl/sb-ext:*invoke-debugger-hook*'><tt>*invoke-debugger-hook*</tt></a>
   to simply quit with a special exit code instead of entering the
-  normal debugger
-<li> Most output output (ASDF system compilation output, low-level
-  error messages, etc) is redirected to a log stream; that stream can
-  be directed to a file with the <tt>--logfile</tt> argument
-<li> Stale FASLs are automatically recompiled with an <tt>:around</tt>
+  normal debugger (in CCL the same behavior is accomplished using
+  the <tt>:application</tt> and <tt>:error-handler</tt> arguments
+  to <tt>ccl:save-application</tt>)
+<li> Most output (ASDF system compilation output, low-level error
+  messages, etc) is redirected to a log stream; that stream can be
+  directed to a file with the <tt>--logfile</tt> argument
+<li> Stale compiled files are automatically recompiled with an <tt>:around</tt>
   method on <tt>asdf:perform</tt>
 </ul>
 
@@ -444,7 +448,8 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
 
 <li>The dumpfile performs the eval/load/load-system/require
   actions. Each operation is evaluated with a fresh binding
-  of <tt>sb-ext:*invoke-debugger-hook*</tt> to the buildap debugger
+  of <tt>sb-ext:*invoke-debugger-hook*</tt> in sbcl
+  or <tt>ccl::*debugger-hook*</tt> in ccl to the buildapp debugger
   function. If the binding is modified, the new value is saved.
 
 <li>The dumpfile clears itself out of the environment:
@@ -452,15 +457,17 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
 <ul>
 <li> Remove extra ASDF methods
  with <a href='http://l1sp.org/cl/remove-method'><tt>remove-method</tt></a>
-<li> Reset <tt>sb-ext:*invoke-debugger-hook*</tt> to the saved value
-  or NIL if no value was saved.
+<li> Reset the debugger hook to the saved value or NIL if no value was
+  saved.
 <li> Delete the dumpfile package
  with <a href='http://l1sp.org/cl/delete-package'><tt>delete-package</tt></a>
 </ul>
 
 <li>The dumpfile then creates an executable
-  with <a href="http://l1sp.org/sbcl/sb-ext:save-lisp-and-die"><tt>save-lisp-and-die</tt></a>. This
-  ends the sbcl subprocess.
+with <a href="http://l1sp.org/sbcl/sb-ext:save-lisp-and-die"><tt>save-lisp-and-die</tt></a>
+in sbcl or
+<a href="http://ccl.clozure.com/manual/chapter4.9.html"><tt>ccl:save-application</tt></a>
+in ccl. This ends the lisp subprocess.
 </ol>
 
 <li> It deletes the dumpfile.

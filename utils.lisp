@@ -55,9 +55,7 @@
 (defun native-namestring (namestring)
   (let ((p (pathname namestring)))
     #+sbcl (sb-ext:native-namestring p)
-    ;; adapted the following line from asdf.lisp
-    #+ccl  (let ((*default-pathname-defaults* #p"/"))
-             (ccl:native-translated-namestring p))))
+    #+ccl  (ccl:native-translated-namestring p)))
 
 (defparameter *alphabet*
   (concatenate 'string

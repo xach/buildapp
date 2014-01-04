@@ -445,10 +445,11 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
   required <tt>:save-runtime-options</tt> argument?
 
 <li>The dumpfile performs the eval/load/load-system/require
-  actions. Each operation is evaluated with a fresh binding
-  of <tt>sb-ext:*invoke-debugger-hook*</tt> in sbcl
-  or <tt>ccl::*debugger-hook*</tt> in ccl to the buildapp debugger
-  function. If the binding is modified, the new value is saved.
+  actions. Each operation is evaluated in the <tt>cl-user</tt> package
+  and with a fresh binding of <tt>sb-ext:*invoke-debugger-hook*</tt>
+  in sbcl or <tt>ccl::*debugger-hook*</tt> in ccl to the buildapp
+  debugger function. If the binding is modified, the new value is
+  saved.
 
 <li>The dumpfile clears itself out of the environment:
 

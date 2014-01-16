@@ -264,7 +264,8 @@ it. If an exact filename is not found, file.lisp is also tried."
 (defun dumper-action-form (dumper)
   (let ((forms (mapcar 'invoke-debugger-hook-wrapper
                        (dumper-action-forms dumper))))
-    `(progn ,@forms)))
+    `(let ((*package* (find-package "CL-USER")))
+       ,@forms)))
 
 (defun dumpfile-forms (dumper)
   "Return a list of forms to be saved to a dumpfile."

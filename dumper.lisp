@@ -90,7 +90,9 @@
 
 (defgeneric needs-asdf-p (dumper)
   (:method (dumper)
-    (find :load-system (actions dumper) :key 'first)))
+    (or
+     (find :load-system (actions dumper) :key 'first)
+     (asdf-directives dumper))))
 
 (defmethod print-object ((dumper dumper) stream)
   (print-unreadable-object (dumper stream :type t)

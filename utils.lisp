@@ -30,6 +30,12 @@
 
 (in-package #:buildapp)
 
+(defun file-string (file)
+  (with-output-to-string (string)
+    (with-open-file (stream file)
+      (loop for char = (read-char stream nil)
+            while char do (write-char char string)))))
+
 ;;; interoperability
 (defun get-args ()
   #+sbcl 'sb-ext:*posix-argv*

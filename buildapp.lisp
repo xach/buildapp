@@ -30,15 +30,8 @@
 
 (in-package #:buildapp)
 
-(defparameter *output-type-pathname*
-  #+sbcl
-  (let* ((runtime-symbol (find-symbol "*RUNTIME-PATHNAME*" '#:sb-ext))
-         (template (if runtime-symbol
-                       (symbol-value runtime-symbol)
-                       #p"buildapp")))
-    (make-pathname :type (pathname-type template)))
-  #+ccl
-  (make-pathname :type #+windows #p"buildapp.exe" #-windows nil)
+(defparameter *buildapp-pathname-type*
+  (make-pathname :type #+windows "exe" #-windows nil)
   "This pathname is merged with the output parameter to produce the
   final output executable name. It's meant to automatically include
   the executable suffix .EXE on Windows.")
@@ -60,10 +53,7 @@ Required flags:
 Entry-point flags:
   --entry NAME              Use the function identified by NAME as the
                               executable's toplevel function. Called
-                              with "
-    #+sbcl "SB-EXT:*POSIX-ARGV*"
-    #+ccl "(ccl::command-line-arguments)"
-    " as its only
+                              with a list of command-line arguments as its
                               argument. If NAME has a colon, it is
                               treated as a package separator,
                               otherwise CL-USER is the implied
@@ -109,32 +99,21 @@ Load path flags:
 There may be any number of load-path/asdf-path/asdf-tree/manifest-file
 flags. They take priority in command-line order.
 
-Other flags:"
-#+sbcl
-"
+Other flags:
   --compress-core           Compress the core or executable; requires
-                              configuration support in SBCL"
-"
-  --core-only               Make a core file only, not an executable"
-#+sbcl
-"
+                              configuration support in SBCL
+  --core-only               Make a core file only, not an executable
   --dynamic-space-size MB   Pass a --dynamic-space-size option to SBCL
-                              when building; value is megabytes"
-"
+                              when building; value is megabytes
   --help                    Show this usage message
-  --logfile FILE            Log compilation and load output to FILE"
-#+sbcl
-"
+  --logfile FILE            Log compilation and load output to FILE
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
-                              found in your PATH environment variable"
-"
+                              found in your PATH environment variable
 For the latest documentation, see http://www.xach.com/lisp/buildapp/
 "))
 
 (define-condition silent-exit-error (error) ())
-
 (defparameter *system-load-output* *standard-output*)
-(defparameter *logfile-output* (make-broadcast-stream))
 
 (dumpable check-pseudosymbol
   (defun check-pseudosymbol (package-name symbol-name pretty-name)
@@ -156,10 +135,12 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
   (defun dump-file-debugger (condition previous-hook)
     "The function to call if there are errors when loading the dump file."
     (declare (ignore previous-hook))
-    (format *system-load-output* "~&Fatal ~A:~%  ~A~%"
+    (format *error-output* "~&Fatal ~A:~%  ~A~%"
             (type-of condition) condition)
-    (print (macroexpand-1 '(backtrace-as-list)) *logfile-output*)
-    (macroexpand-1 '(quit 111))))
+    (map nil (lambda (frame)
+               (print frame *error-output*))
+         (buildapp-sys:backtrace-as-list))
+    (buildapp-sys:quit 111)))
 
 (defun command-line-debugger (condition previous-hook)
   "The function to call if there are errors in the command-line
@@ -171,8 +152,7 @@ buildapp application."
     (when (typep condition 'command-line-error)
       (terpri *error-output*)
       (write-string *short-usage* *error-output*)))
-  (print (backtrace-as-list) *logfile-output*)
-  (quit 1))
+  (buildapp-sys:quit 1))
 
 (dumpable asdf-ops
   (progn
@@ -189,9 +169,7 @@ buildapp application."
 
     (defun load-system (name)
       "Load ASDF system identified by NAME."
-      (let ((*standard-output* *logfile-output*)
-            (*error-output* *logfile-output*)
-            (*compile-verbose* t)
+      (let ((*compile-verbose* t)
             (*compile-print* t))
         (handler-bind
             ((warning
@@ -224,8 +202,7 @@ it. If an exact filename is not found, file.lisp is also tried."
           (when truename
             (format *system-load-output* ";; loading file ~S~%" truename)
             (return-from load-file
-              (let ((*standard-output* *logfile-output*)
-                    (*package* (find-package '#:cl-user)))
+              (let ((*package* (find-package '#:cl-user)))
                 (load truename :verbose t :print t))))))
       (error "File ~S not found" file))))
 
@@ -247,19 +224,8 @@ it. If an exact filename is not found, file.lisp is also tried."
            `(require ',(make-symbol (string-upcase object)))))))
 
 (defun invoke-debugger-hook-wrapper (form)
-  `(let ((previous-hook #+sbcl sb-ext:*invoke-debugger-hook*
-                        #+ccl  ccl::*debugger-hook*)
-         #+sbcl (sb-ext:*invoke-debugger-hook* sb-ext:*invoke-debugger-hook*)
-         #+ccl  (ccl::*debugger-hook* ccl::*debugger-hook*))
-     (progn ,form)
-     #+sbcl
-     (unless (eql sb-ext:*invoke-debugger-hook* previous-hook)
-       (setf *post-invoke-debugger-hook*
-             sb-ext:*invoke-debugger-hook*))
-     #+ccl
-     (unless (eql ccl::*debugger-hook* previous-hook)
-       (setf *post-invoke-debugger-hook*
-             ccl::*debugger-hook*))))
+  `(buildapp-sys:with-buildapp-building-debugger
+     ,form))
 
 (defun dumper-action-form (dumper)
   (let ((forms (mapcar 'invoke-debugger-hook-wrapper
@@ -270,7 +236,7 @@ it. If an exact filename is not found, file.lisp is also tried."
 (defun dumpfile-forms (dumper)
   "Return a list of forms to be saved to a dumpfile."
   (let* ((package (package dumper))
-         (output (merge-pathnames (output dumper) *output-type-pathname*))
+         (output (output dumper))
          (entry-function-form
           (entry-function-form dumper))
          (asdf (needs-asdf-p dumper)))
@@ -279,35 +245,18 @@ it. If an exact filename is not found, file.lisp is also tried."
       (cl:in-package ,package)
       (defparameter *post-invoke-debugger-hook* nil)
       (defparameter *system-load-output* *standard-output*)
-      (defvar *logfile-output*)
       ,(dump-form 'debugger)
-      (setf #+sbcl sb-ext:*invoke-debugger-hook*
-            #+ccl  ccl::*debugger-hook*
-            'dump-file-debugger)
-      ,@(if (logfile dumper)
-            `((defparameter *logfile-output*
-                (open ,(logfile dumper) :direction :output
-                      :if-exists :supersede))
-              (setf *system-load-output* (make-broadcast-stream
-                                          *standard-output*
-                                          *logfile-output*)))
-            '((defparameter *logfile-output*
-                (make-broadcast-stream))))
-      ;; Check that S-L-A-D will work as needed
-      #+sbcl
-      (unless (find-symbol "SAVE-RUNTIME-OPTIONS" '#:sb-impl)
-        (error "This SBCL, ~A, does not support :SAVE-RUNTIME-OPTIONS"
-               (lisp-implementation-version)))
-      ,@(when (compress-core dumper)
-              `((unless (member :sb-core-compression *features*)
-                  (error "This SBCL does not support core compression"))))
-      ;; Check for writability to the output file
-      (with-open-file (stream ,(output dumper)
-                              :direction :output
-                              :if-does-not-exist :create
-                              :if-exists :append)
-        (write-line "buildapp write check" stream))
-      (delete-file ,(output dumper))
+      (buildapp-sys:with-buildapp-building-debugger
+        (buildapp-sys:check-buildapp-feature-compatibility)
+        ,@(when (compress-core dumper)
+                (buildapp-sys:check-buildapp-feature-compatibility :compress-core))
+        ;; Check for writability to the output file
+        (with-open-file (stream ,(output dumper)
+                                :direction :output
+                                :if-does-not-exist :create
+                                :if-exists :append)
+          (write-line "buildapp write check" stream))
+        (delete-file ,(output dumper)))
       ,@(when asdf
               `((require '#:asdf)
                 ,(dump-form 'asdf-ops)
@@ -323,50 +272,30 @@ it. If an exact filename is not found, file.lisp is also tried."
       ,@(when entry-function-form
               (list (dump-form 'check-pseudosymbol)
                     (entry-function-check-form dumper)))
-      (ignore-errors (close *logfile-output*))
       ;; Remove buildapp artifacts from the system
-      (setf #+sbcl sb-ext:*invoke-debugger-hook*
-            #+ccl  ccl::*debugger-hook*
-            *post-invoke-debugger-hook*)
+      (buildapp-sys:initialize-debugging-hooks)
       ,@(when asdf
               '((setf asdf:*system-definition-search-functions*
                  (remove 'system-search-function
                    asdf:*system-definition-search-functions*))))
       (in-package #:cl-user)
       (delete-package ',package)
-      #+sbcl (sb-ext:gc :full t)
-      #+ccl  (ccl:gc)
-      #+sbcl
-      (sb-ext:save-lisp-and-die
-       ,output
-       ,@(unless (core-only dumper)
-                 '(:executable t
-                   :save-runtime-options t))
-       ,@(when (compress-core dumper)
-               '(:compression t))
-       ,@(when entry-function-form
-               (list :toplevel
-                     entry-function-form)))
-      #+ccl
-      (ccl:save-application
-       ,output
-       ;; currently :native may not be supplied with :prepend-kernel
-       ,@(unless (core-only dumper)
-                 '(:prepend-kernel t))
-       ,@(when entry-function-form
-               (list :toplevel-function
-                     entry-function-form))
-       :purify t
-       ;; The :application-class option must be supplied for the
-       ;; :error-handler option to have any effect.  See
-       ;; http://trac.clozure.com/ccl/ticket/1039.
-       :application-class 'ccl::application
-       :error-handler :quit))))
+      (buildapp-sys:gc)
+      (buildapp-sys:save-executable ,output
+                                    :core-only ,(core-only dumper)
+                                    :compress ,(compress-core dumper)
+                                    :entry-function ,entry-function-form))))
 
 (defun write-dumpfile (dumper stream)
-  (let ((*print-case* :downcase))
+  (let ((*print-case* :downcase)
+        (*print-pretty* t))
+    (write (dump-form 'buildapp-sys-package) :stream stream)
+    (terpri stream)
+    (write-string (implementation-sys-string (implementation dumper))
+                  stream)
     (dolist (form (dumpfile-forms dumper))
-      (print form stream))))
+      (write form :stream stream)
+      (terpri stream))))
 
 (defun dump-to-file (dumper file)
   "Save the forms of DUMPER to FILE."
@@ -376,53 +305,46 @@ it. If an exact filename is not found, file.lisp is also tried."
       (write-dumpfile dumper stream))))
 
 
-(defun main (argv)
+(defun main (argv &key without-debugger)
   "Create an executable from the command-line arguments provided in
 ARGV. See *USAGE* for details."
   (when (string-equal (second argv) "--help")
     (write-string *usage* *standard-output*)
-    (quit))
+    (buildapp-sys:quit 0))
+  (unless without-debugger
+    (setf *debugger-hook* 'command-line-debugger))
   (let* ((dumper (command-line-dumper (rest argv)))
          (*package* (find-package :buildapp))
-         #+sbcl (dynamic-space-size (dynamic-space-size dumper)))
+         (dynamic-space-size (dynamic-space-size dumper)))
     (with-tempfile (stream ("dumper.lisp" file))
       (write-dumpfile dumper stream)
       (force-output stream)
       (when (dumpfile-copy dumper)
         (copy-file file (dumpfile-copy dumper)))
-      (let ((process (run-program #+sbcl (sbcl dumper)
-                                  #+ccl  (ccl  dumper)
-                                  (flatten
-                                   (list
-                                    #+sbcl
-                                    (when dynamic-space-size
-                                      (list "--dynamic-space-size"
-                                            (princ-to-string
-                                             dynamic-space-size)))
-                                    #+sbcl "--noinform"
-                                    #+ccl  "--quiet"
-                                    #+sbcl "--disable-debugger"
-                                    #+sbcl "--no-userinit"
-                                    #+sbcl "--no-sysinit"
-                                    #+ccl  "--no-init"
-                                    "--load" (native-namestring
-                                              (probe-file file)))))))
-        (if (zerop #+sbcl (sb-ext:process-exit-code process)
-                   #+ccl  (ccl::external-process-%exit-code process))
-            (probe-file (output dumper))
-            (error 'silent-exit-error))))))
+      (buildapp-sys:run-lisp-load (implementation-path dumper)
+                                  file
+                                  :dynamic-space-size dynamic-space-size)
+      (probe-file (output dumper)))))
 
-(defun build-buildapp (&optional (executable "buildapp"))
-  (let ((full-output (merge-pathnames executable)))
-    (main (list "sbcl"
-                "--asdf-path"
-                (native-namestring
-                 (asdf:system-relative-pathname :buildapp "./"))
-                "--load-system" "buildapp"
-                "--entry" "buildapp:main"
-                "--output"
-                (native-namestring full-output)))))
-
+(defun build-buildapp (&key
+                         (output "buildapp")
+                         (implementation *default-implementation*)
+                         implementation-path)
+  (unless implementation-path
+    (setf implementation-path (default-implementation-path implementation)))
+  (let ((full-output (merge-pathnames output)))
+    (main (flatten
+           (list "sbcl"
+                 "--asdf-path"
+                 (native-namestring
+                  (asdf:system-relative-pathname :buildapp "./"))
+                 "--load-system" "buildapp"
+                 "--entry" "buildapp:main"
+                 "--implementation" implementation
+                 "--implementation-path" implementation-path
+                 "--output"
+                 (native-namestring full-output)))
+          :without-debugger t)))
 
 
 (defun buildapp-init ()

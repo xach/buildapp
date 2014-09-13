@@ -92,7 +92,7 @@
     `(let ((,flag- ,flag))
        (let ((,value (find ,flag- ,args :test 'string-equal)))
          (when ,value
-           (setf ,args (remove ,flag- ,args :Test 'string-equal))
+           (setf ,args (remove ,flag- ,args :test 'string-equal))
            t)))))
 
 (defun command-line-dumper (args)
@@ -109,7 +109,7 @@
         (unless (output plan)
           (error 'missing-output-argument))
         (setf (asdf-directives plan) (reverse (asdf-directives plan)))
-        (return plan))
+        (return (initialize-dumper-defaults plan)))
       (let* ((argument (pop args))
              (value (pop args))
              (keyword (argument-keyword argument)))
@@ -124,6 +124,14 @@
                (error "Invalid pathname given to ~A -- ~S"
                       argument value))
              (push (list keyword value) (asdf-directives plan))))
+          (:implementation
+           (when (implementation plan)
+             (error 'duplicate-argument :flag argument))
+           (setf (implementation plan) value))
+          (:implementation-path
+           (when (implementation-path plan)
+             (error 'duplicate-argument :flag argument))
+           (setf (implementation-path plan) value))
           (:load-path
            (push value (load-paths plan)))
           (:output

@@ -39,5 +39,10 @@
                (:file "asdf-files")
                (:file "dumper")
                (:file "command-line")
+               (:file "buildapp-sys")
+               (:file "sys-table")
+               (:module "implementation"
+                        :components (#+ccl
+                                     (:file "ccl")))
                (:file "buildapp")))
 

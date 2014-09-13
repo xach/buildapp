@@ -30,11 +30,21 @@
 
 (in-package #:buildapp)
 
+(defvar *default-implementation* "sbcl")
+
 (defclass dumper ()
   ((package
     :initarg :package
     :accessor package
     :initform (gensym "DUMPER"))
+   (implementation
+    :initarg :implementation
+    :accessor implementation
+    :initform nil)
+   (implementation-path
+    :initarg :implementation-path
+    :accessor implementation-path
+    :initform nil)
    (actions
     :initarg :actions
     :accessor actions
@@ -93,6 +103,22 @@
     (or
      (find :load-system (actions dumper) :key 'first)
      (asdf-directives dumper))))
+
+(defgeneric initialize-dumper-defaults (dumper)
+  (:documentation "Initialize the slots of DUMPER to appropriate
+  default values, if needed.")
+  ;; This isn't done with initforms or default-initargs because of
+  ;; command-line processing. Perhaps that's a better place to "fix"
+  ;; it.
+  (:method (dumper)
+    (with-slots (implementation implementation-path)
+        dumper
+      (unless implementation
+        (setf implementation *default-implementation*))
+      (unless implementation-path
+        (setf implementation-path
+              (default-implementation-path implementation)))
+      dumper)))
 
 (defmethod print-object ((dumper dumper) stream)
   (print-unreadable-object (dumper stream :type t)

@@ -43,6 +43,8 @@
                (:file "sys-table")
                (:module "implementation"
                         :components (#+ccl
-                                     (:file "ccl")))
+                                     (:file "ccl")
+                                     #+sbcl
+                                     (:file "sbcl")))
                (:file "buildapp")))
 

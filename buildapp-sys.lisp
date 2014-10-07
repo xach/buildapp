@@ -13,6 +13,7 @@
              #:run-lisp-load
              #:gc
              #:with-buildapp-building-debugger
+             #:debugger-hook
              #:initialize-debugging-hooks
              #:backtrace-as-list)))
 

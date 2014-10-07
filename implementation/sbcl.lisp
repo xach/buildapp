@@ -82,6 +82,12 @@
 
 (defvar *final-debugger-hook* *debugger-hook*)
 
+(defun debugger-hook ()
+  sb-ext:*invoke-debugger-hook*)
+
+(defun (setf debugger-hook) (new-value)
+  (setf sb-ext:*invoke-debugger-hook* new-value))
+
 (defmacro with-buildapp-building-debugger (&body body)
   `(let ((sb-ext:*invoke-debugger-hook* 'dump-file-debugger))
      (progn ,@body)

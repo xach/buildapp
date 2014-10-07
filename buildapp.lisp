@@ -312,7 +312,7 @@ ARGV. See *USAGE* for details."
     (write-string *usage* *standard-output*)
     (buildapp-sys:quit 0))
   (unless without-debugger
-    (setf sb-ext:*invoke-debugger-hook* 'command-line-debugger))
+    (setf (buildapp-sys:debugger-hook) 'command-line-debugger))
   (let* ((dumper (command-line-dumper (rest argv)))
          (*package* (find-package :buildapp))
          (dynamic-space-size (dynamic-space-size dumper)))

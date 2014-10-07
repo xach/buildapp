@@ -95,78 +95,83 @@
            (setf ,args (remove ,flag- ,args :test 'string-equal))
            t)))))
 
+(defparameter *forbidden-duplicate-keywords*
+  '(:implementation
+    :implementation-path
+    :output
+    :logfile
+    :entry
+    :dynamic-space-size))
+
 (defun command-line-dumper (args)
   (let ((plan (make-instance 'dumper))
-        (default-dispatched-entry nil))
-    (when (popflag "--compress-core" args)
-      (setf (compress-core plan) t))
-    (when (popflag "--core-only" args)
-      (setf (core-only plan) t))
-    (when (oddp (length args))
-      (error 'odd-number-of-arguments))
-    (loop
-      (when (endp args)
-        (unless (output plan)
-          (error 'missing-output-argument))
-        (setf (asdf-directives plan) (reverse (asdf-directives plan)))
-        (return (initialize-dumper-defaults plan)))
-      (let* ((argument (pop args))
-             (value (pop args))
-             (keyword (argument-keyword argument)))
-        (unless value
-          (error 'missing-argument))
-        (case keyword
-          ((:load :load-system :require :eval)
-           (push (list keyword value) (actions plan)))
-          ((:manifest-file :asdf-path :asdf-tree)
-           (let ((pathname (probe-file value)))
-             (unless pathname
-               (error "Invalid pathname given to ~A -- ~S"
-                      argument value))
-             (push (list keyword value) (asdf-directives plan))))
-          (:implementation
-           (when (implementation plan)
-             (error 'duplicate-argument :flag argument))
-           (setf (implementation plan) value))
-          (:implementation-path
-           (when (implementation-path plan)
-             (error 'duplicate-argument :flag argument))
-           (setf (implementation-path plan) value))
-          (:load-path
-           (push value (load-paths plan)))
-          (:output
-           (when (output plan)
-             (error 'duplicate-argument :flag argument))
-           (setf (output plan) value))
-          (:logfile
-           (when (logfile plan)
-             (error 'duplicate-argument :flag argument))
-           (setf (logfile plan) value))
-          (:dumpfile-copy
-           (setf (dumpfile-copy plan) value))
-          (:sbcl
-           (when (sbcl plan)
-             (setf (sbcl plan) value)))
-          (:entry
-           (when (dispatched-entries plan)
-             (error 'entry-and-dispatched-entry))
-           (when (entry plan)
-             (error 'duplicate-argument :flag argument))
-           (setf (entry plan) (make-pseudosymbol value)))
-          (:dispatched-entry
-           (when (entry plan)
-             (error 'entry-and-dispatched-entry))
-           (let ((entry (make-dispatched-entry value)))
-             (when (default-entry-p entry)
-               (if default-dispatched-entry
-                   (error 'duplicate-default-dispatched-entry
-                          :flag (format nil "~A ~A" argument value))
-                   (setf default-dispatched-entry entry)))
-             (push entry (dispatched-entries plan))))
-          (:dynamic-space-size
-           (setf (dynamic-space-size plan) (parse-integer value)))
-          (t
-           (error 'unknown-argument :flag argument)))))))
+        (default-dispatched-entry nil)
+        (seen (make-hash-table)))
+    (flet ((check-duplicated-argument (keyword)
+             (if (and (member keyword *forbidden-duplicate-keywords*)
+                      (gethash keyword seen))
+                 (error 'duplicate-argument :flag keyword)
+                 (setf (gethash keyword seen) keyword))))
+      (when (popflag "--compress-core" args)
+        (setf (compress-core plan) t))
+      (when (popflag "--core-only" args)
+        (setf (core-only plan) t))
+      (when (oddp (length args))
+        (error 'odd-number-of-arguments))
+      (loop
+        (when (endp args)
+          (unless (output plan)
+            (error 'missing-output-argument))
+          (setf (asdf-directives plan) (reverse (asdf-directives plan)))
+          (return plan))
+        (let* ((argument (pop args))
+               (value (pop args))
+               (keyword (argument-keyword argument)))
+          (check-duplicated-argument keyword)
+          (unless value
+            (error 'missing-argument))
+          (case keyword
+            ((:load :load-system :require :eval)
+             (push (list keyword value) (actions plan)))
+            ((:manifest-file :sdf-path :asdf-tree)
+             (let ((pathname (probe-file value)))
+               (unless pathname
+                 (error "Invalid pathname given to ~A -- ~S"
+                        argument value))
+               (push (list keyword value) (asdf-directives plan))))
+            (:implementation
+             (setf (implementation plan) value))
+            (:implementation-path
+             (setf (implementation-path plan) value))
+            (:load-path
+             (push value (load-paths plan)))
+            (:output
+             (setf (output plan) value))
+            (:logfile
+             (setf (logfile plan) value))
+            (:dumpfile-copy
+             (setf (dumpfile-copy plan) value))
+            (:sbcl
+             (when (sbcl plan)
+               (setf (sbcl plan) value)))
+            (:entry
+             (when (dispatched-entries plan)
+               (error 'entry-and-dispatched-entry))
+             (setf (entry plan) (make-pseudosymbol value)))
+            (:dispatched-entry
+             (when (entry plan)
+               (error 'entry-and-dispatched-entry))
+             (let ((entry (make-dispatched-entry value)))
+               (when (default-entry-p entry)
+                 (if default-dispatched-entry
+                     (error 'duplicate-default-dispatched-entry
+                            :flag (format nil "~A ~A" argument value))
+                     (setf default-dispatched-entry entry)))
+               (push entry (dispatched-entries plan))))
+            (:dynamic-space-size
+             (setf (dynamic-space-size plan) (parse-integer value)))
+            (t
+             (error 'unknown-argument :flag argument))))))))
 
 
 

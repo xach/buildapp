@@ -1,22 +1,24 @@
+#content { 
+  max-width: 50em; margin-left: auto;  margin-right: auto;
+  font-family: sans-serif; 
+  line-height: 1.4em;
+  background-color: white;
+  padding: 0.25em 1em 0.25em 1em;
+}
 
 body {
-    margin-left: 4em;
-    font: small/1.2em "Lucida Grande", "Trebuchet MS", "Bitstream Vera Sans", Verdana, Helvetica, sans-serif;
-
+  background-color: #f4eecf;
 }
+
 
 p.copyright {
     font-size: 75%;
     font-weight: bold;
 }
 
-#content {
-    width: 50em;
-}
-
 h2, h3 {
-    margin-bottom: 0em;
-    margin-top: 2em;
+    //margin-bottom: 0em;
+    //margin-top: 2em;
 }
 
 p.html {

@@ -159,7 +159,8 @@ For the latest documentation, see http://www.xach.com/lisp/buildapp/
     (format *system-load-output* "~&Fatal ~A:~%  ~A~%"
             (type-of condition) condition)
     (print (macroexpand-1 '(backtrace-as-list)) *logfile-output*)
-    (macroexpand-1 '(quit 111))))
+    #+sbcl (sb-ext:exit :code 111)
+    #+ccl (ccl:quit 111)))
 
 (defun command-line-debugger (condition previous-hook)
   "The function to call if there are errors in the command-line

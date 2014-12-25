@@ -139,7 +139,10 @@
           (:sbcl
            (when (sbcl plan)
              (setf (sbcl plan) value)))
-          (:entry
+          (:ccl
+           (when (ccl plan)
+             (setf (ccl plan) value)))
+           (:entry
            (when (dispatched-entries plan)
              (error 'entry-and-dispatched-entry))
            (when (entry plan)

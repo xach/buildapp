@@ -127,6 +127,10 @@ Other flags:"
 "
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
                               found in your PATH environment variable"
+#+ccl
+"
+  --ccl PATH-TO-CCL         Use PATH-TO-CCL instead of the ccl program
+                              found in your PATH environment variable"
 "
 For the latest documentation, see http://www.xach.com/lisp/buildapp/
 "))

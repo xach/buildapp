@@ -33,7 +33,7 @@
   configures and saves an executable Common Lisp image or
   non-executable core."
   :author "Zach Beane <xach@xach.com>"
-  :version "1.5.4"
+  :version "1.5.5"
   :license "BSD"
   :serial t
   :components ((:file "package")

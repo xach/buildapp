@@ -369,9 +369,11 @@ it. If an exact filename is not found, file.lisp is also tried."
        :error-handler :quit))))
 
 (defun write-dumpfile (dumper stream)
-  (let ((*print-case* :downcase))
-    (dolist (form (dumpfile-forms dumper))
-      (print form stream))))
+  (with-standard-io-syntax
+    (let ((*print-case* :downcase)
+          (*package* (find-package '#:buildapp)))
+      (dolist (form (dumpfile-forms dumper))
+        (print form stream)))))
 
 (defun dump-to-file (dumper file)
   "Save the forms of DUMPER to FILE."

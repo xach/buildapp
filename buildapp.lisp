@@ -38,7 +38,7 @@
                        #p"buildapp")))
     (make-pathname :type (pathname-type template)))
   #+ccl
-  (make-pathname :type #+windows #p"buildapp.exe" #-windows nil)
+  (make-pathname :type #+windows "exe" #-windows nil)
   "This pathname is merged with the output parameter to produce the
   final output executable name. It's meant to automatically include
   the executable suffix .EXE on Windows.")

@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# Invoke the buildapp executable appropriate to the lisp specified in
+# the environment variable named "LISP."  If "LISP" is not set then
+# default to invoking buildapp-sbcl.
+#
+if [ "$LISP" == "ccl" ];then
+   exec $0-ccl $@
+else
+   exec $0-sbcl $@
+fi

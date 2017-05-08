@@ -1,22 +1,39 @@
-DESTDIR = /usr/local
-LISP := sbcl
+.PHONY: all
 
-ifeq ($(LISP),sbcl)
-FLAGS=--noinform --no-userinit --no-sysinit --disable-debugger
-else
-FLAGS=--quiet --no-init
+BASEDIR ?= $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+DESTDIR ?= /usr/local
+
+LISPS :=
+
+SBCL ?= sbcl
+SBCL_PATH := $(shell which $(SBCL) 2>/dev/null)
+ifeq "$(.SHELLSTATUS)" "0"
+LISPS += sbcl
 endif
+SBCL_FLAGS := --noinform --no-userinit --no-sysinit --disable-debugger
 
-buildapp: command-line.lisp utils.lisp buildapp.lisp dumper.lisp package.lisp
-	$(LISP) $(FLAGS) \
-	  --eval "(require 'asdf)" \
-	  --eval "(push \"$$(pwd)/\" asdf:*central-registry*)" \
-	  --eval "(require 'buildapp)" \
-          --eval "(buildapp::build-buildapp)" \
-          --eval "#+sbcl (exit) #+ccl (quit)"
+CCL ?= ccl
+CCL_PATH := $(shell which $(CCL) 2>/dev/null)
+ifeq "$(.SHELLSTATUS)" "0"
+LISPS += ccl
+endif
+CCL_FLAGS := --quiet --no-init
+
+FORMS :=--eval "(require 'asdf)"				\
+	--eval "(push \"$(BASEDIR)/\" asdf:*central-registry*)"	\
+	--eval "(require 'buildapp)"
+
+all: $(addprefix buildapp-,$(LISPS))
+
+buildapp-sbcl: command-line.lisp utils.lisp buildapp.lisp dumper.lisp package.lisp
+	$(SBCL) $(SBCL_FLAGS) $(FORMS) --eval "(buildapp::build-buildapp \"$@\")" --eval "(exit)"
+
+buildapp-ccl: command-line.lisp utils.lisp buildapp.lisp dumper.lisp package.lisp
+	$(CCL) $(CCL_FLAGS) $(FORMS) --eval "(buildapp::build-buildapp \"$@\")" --eval "(quit)"
 
 clean:
-	rm -f buildapp *~ *.fasl *.lx32fsl
+	rm -f $(addprefix buildapp-,$(LISPS)) *~ *.fasl *.lx32fsl
 
-install: buildapp
-	install -c -m 555 buildapp ${DESTDIR}/bin/buildapp
+install: buildapp $(addprefix buildapp-,$(LISPS))
+	install -d $(DESTDIR)/bin
+	install -c -m 555 $^ $(DESTDIR)/bin/

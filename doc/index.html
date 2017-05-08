@@ -35,12 +35,15 @@ The latest version is 1.5.6, released on November 7th, 2015.
 
 <a name='installation'><h2>Installation</h2></a>
 
-<p>Buildapp does not require any libraries. To compile it with SBCL
-  you simply run <tt>make install</tt>. To compile with a different
-  lisp, just specify it after the make command:
-  <tt>make install LISP=&lt;my_favorite_lisp&gt;</tt>. For example,
-  you wanted to compile it under CCL you'd say
-  <tt>make install LISP=ccl</tt> By default, it is installed in
+<p>Buildapp does not require any libraries. To compile it you simply
+  run <tt>make install</tt>.  This will compile and install versions
+  of buildapp with whichever of SBCL and/or CCL are available on your
+  system.  To later call a particular version of buildapp either call
+  the specific executable (i.e., <tt>buildapp-sbcl</tt>
+  or <tt>buildapp-ccl</tt>) or call the <tt>buildapp</tt> executable
+  which will dispatch depending on the value of the <tt>LISP</tt>
+  environment variable (defaulting to SBCL).  By default, it is
+  installed in
   <tt>/usr/local/bin</tt>; to use another location,
   use <tt>make&nbsp;DESTDIR=/path&nbsp;install</tt>.
 

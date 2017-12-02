@@ -183,11 +183,14 @@ location."
    :test #'string=))
 
 (defun copy-file (input output &key (if-exists :supersede))
-  (with-open-file (input-stream input)
-    (with-open-file (output-stream output :direction :output
+  (with-open-file (input-stream input :element-type '(unsigned-byte 8))
+    (with-open-file (output-stream output :element-type '(unsigned-byte 8)
+				   :direction :output
                                    :if-exists if-exists)
-      (loop for char = (read-char input-stream nil)
-            while char do (write-char char output-stream)))))
+      (let ((buf (make-array 4096 :element-type (stream-element-type input-stream))))
+	(loop for pos = (read-sequence buf input-stream)
+	   while (plusp pos)
+	   do (write-sequence buf output-stream :end pos))))))
 
 (defun file-lines (file)
   (with-open-file (stream file)

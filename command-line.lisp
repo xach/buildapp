@@ -139,6 +139,8 @@
           (:sbcl
            (when (sbcl plan)
              (setf (sbcl plan) value)))
+          (:core
+           (setf (core-file plan) value))
           (:ccl
            (when (ccl plan)
              (setf (ccl plan) value)))

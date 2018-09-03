@@ -59,6 +59,10 @@
     :initarg :sbcl
     :accessor sbcl
     :initform "sbcl")
+   (core-file
+    :initarg :core-file
+    :accessor core-file
+    :initform nil)
    (ccl
     :initarg :ccl
     :accessor ccl

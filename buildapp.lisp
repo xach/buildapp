@@ -127,6 +127,10 @@ Other flags:"
 "
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
                               found in your PATH environment variable"
+#+sbcl
+"
+  --core PATH-TO-CORE       Use PATH-TO-CORE instead of the standard core
+                              as chosen by your sbcl installation"
 #+ccl
 "
   --ccl PATH-TO-CCL         Use PATH-TO-CCL instead of the ccl program
@@ -391,6 +395,7 @@ ARGV. See *USAGE* for details."
     (quit))
   (let* ((dumper (command-line-dumper (rest argv)))
          (*package* (find-package :buildapp))
+         (core-file (core-file dumper))
          #+sbcl (dynamic-space-size (dynamic-space-size dumper)))
     (with-tempfile (stream ("dumper.lisp" file))
       (write-dumpfile dumper stream)
@@ -401,6 +406,11 @@ ARGV. See *USAGE* for details."
                                   #+ccl  (ccl  dumper)
                                   (flatten
                                    (list
+                                    #+sbcl
+                                    (when core-file
+                                      (list "--core"
+                                            (native-namestring
+                                             core-file)))
                                     #+sbcl
                                     (when dynamic-space-size
                                       (list "--dynamic-space-size"

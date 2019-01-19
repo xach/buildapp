@@ -424,7 +424,8 @@ ARGV. See *USAGE* for details."
     (main (list "sbcl"
                 "--asdf-path"
                 (native-namestring
-                 (asdf:system-relative-pathname :buildapp "./"))
+                 (translate-logical-pathname
+                  (asdf:system-relative-pathname :buildapp "./")))
                 "--load-system" "buildapp"
                 "--entry" "buildapp:main"
                 "--output"

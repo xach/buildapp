@@ -130,7 +130,7 @@
                      (list
                       `(format *error-output* "Unknown dispatch name '~A', quitting~%"
                                binary-name)
-                      (macroexpand-1 (quit 1)))))))))))
+                      (macroexpand-1 '(quit 1)))))))))))
 
 (defgeneric entry-function-form (dumper)
   (:method (dumper)
@@ -165,4 +165,3 @@
 
 (defun dump-form (name)
   (gethash name *dumpable-forms*))
-

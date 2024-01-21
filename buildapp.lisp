@@ -432,8 +432,8 @@ ARGV. See *USAGE* for details."
                               #+ccl  "--no-init"
                               "--load" (native-namestring
                                         (probe-file file)))))))
-                (format t "~&running this command to try to build the application:~%")
-                (pprint cmd) (terpri)
+                ;;(format t "~&running this command to try to build the application:~%")
+                ;;(pprint cmd) (terpri)
                 (eval cmd))
               ;; (run-program #+sbcl (sbcl dumper)
               ;;              #+ccl  (ccl  dumper)
@@ -477,4 +477,3 @@ ARGV. See *USAGE* for details."
         'command-line-debugger))
 
 #+sbcl (pushnew 'buildapp-init sb-ext:*init-hooks*)
-

@@ -163,12 +163,6 @@
              (push entry (dispatched-entries plan))))
           #+sbcl
           (:space-size ;; :dynamic-space-size
-           (format t "Trying to parse dynamic-space-size from \"~a\" giving ~d~%"
-                   value (parse-integer value))
            (setf (dynamic-space-size plan) (parse-integer value)))
           (t
            (error 'unknown-argument :flag argument)))))))
-
-
-
-

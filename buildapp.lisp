@@ -118,11 +118,25 @@ Other flags:"
   --core-only               Make a core file only, not an executable"
 #+sbcl
 "
-  --dynamic-space-size MB   Pass a --dynamic-space-size option to SBCL
-                              when building; value is megabytes"
+  --space-size MB   Pass a --dynamic-space-size option to SBCL
+                              when building and into the built app; value
+                               is megabytes.
+                              Note that the argument has a *different*
+                              name from the SBCL command line argument.
+                              This is necessary to keep SBCL from
+                              swallowing the argument."
+#+sbcl
+"
+  --turn-off-ldb    Pass --disable-ldb to SBCL when building (and into the
+                              built application).
+                              Note that the argument has a *different*
+                              name from the SBCL command line argument.
+                              This is necessary to keep SBCL from
+                              swallowing the argument."
 "
   --help                    Show this usage message
-  --logfile FILE            Log compilation and load output to FILE"
+  --logfile FILE            Log compilation and load output to FILE
+  --dumpfile-copy FILE      Write a copy of the dumpfile to FILE."
 #+sbcl
 "
   --sbcl PATH-TO-SBCL       Use PATH-TO-SBCL instead of the sbcl program
@@ -382,7 +396,6 @@ it. If an exact filename is not found, file.lisp is also tried."
     (let ((*print-case* :downcase))
       (write-dumpfile dumper stream))))
 
-
 (defun main (argv)
   "Create an executable from the command-line arguments provided in
 ARGV. See *USAGE* for details."
@@ -397,23 +410,49 @@ ARGV. See *USAGE* for details."
       (force-output stream)
       (when (dumpfile-copy dumper)
         (copy-file file (dumpfile-copy dumper)))
-      (let ((process (run-program #+sbcl (sbcl dumper)
-                                  #+ccl  (ccl  dumper)
-                                  (flatten
-                                   (list
-                                    #+sbcl
-                                    (when dynamic-space-size
-                                      (list "--dynamic-space-size"
-                                            (princ-to-string
-                                             dynamic-space-size)))
-                                    #+sbcl "--noinform"
-                                    #+ccl  "--quiet"
-                                    #+sbcl "--disable-debugger"
-                                    #+sbcl "--no-userinit"
-                                    #+sbcl "--no-sysinit"
-                                    #+ccl  "--no-init"
-                                    "--load" (native-namestring
-                                              (probe-file file)))))))
+      (format t "~&About to recursively start SBCL, dynamic-space-size is ~a~%" dynamic-space-size)
+      (let ((process
+              (let ((cmd `(run-program #+sbcl ,(sbcl dumper)
+                           #+ccl  ,(ccl  dumper)
+                           ',(flatten
+                             (list
+                              #+sbcl
+                              (when dynamic-space-size
+                                (list "--dynamic-space-size"
+                                      (princ-to-string
+                                       dynamic-space-size)))
+                              #+sbcl
+                              (when (disable-ldb dumper)
+                                "--disable-ldb")
+                              #+sbcl "--noinform"
+                              #+ccl  "--quiet"
+                              #+sbcl "--disable-debugger"
+                              #+sbcl "--no-userinit"
+                              #+sbcl "--no-sysinit"
+                              #+ccl  "--no-init"
+                              "--load" (native-namestring
+                                        (probe-file file)))))))
+                ;;(format t "~&running this command to try to build the application:~%")
+                ;;(pprint cmd) (terpri)
+                (eval cmd))
+              ;; (run-program #+sbcl (sbcl dumper)
+              ;;              #+ccl  (ccl  dumper)
+              ;;              (flatten
+              ;;               (list
+              ;;                #+sbcl
+              ;;                (when dynamic-space-size
+              ;;                  (list "--dynamic-space-size"
+              ;;                        (princ-to-string
+              ;;                         dynamic-space-size)))
+              ;;                #+sbcl "--noinform"
+              ;;                #+ccl  "--quiet"
+              ;;                #+sbcl "--disable-debugger"
+              ;;                #+sbcl "--no-userinit"
+              ;;                #+sbcl "--no-sysinit"
+              ;;                #+ccl  "--no-init"
+              ;;                "--load" (native-namestring
+              ;;                          (probe-file file)))))
+              ))
         (if (zerop #+sbcl (sb-ext:process-exit-code process)
                    #+ccl  (ccl::external-process-%exit-code process))
             (probe-file (output dumper))
@@ -438,4 +477,3 @@ ARGV. See *USAGE* for details."
         'command-line-debugger))
 
 #+sbcl (pushnew 'buildapp-init sb-ext:*init-hooks*)
-

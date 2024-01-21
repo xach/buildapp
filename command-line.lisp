@@ -102,6 +102,9 @@
       (setf (compress-core plan) t))
     (when (popflag "--core-only" args)
       (setf (core-only plan) t))
+    #+sbcl
+    (when (popflag "--turn-off-ldb" args)
+           (setf (slot-value plan 'disable-ldb) t))
     (when (oddp (length args))
       (error 'odd-number-of-arguments))
     (loop
@@ -142,7 +145,7 @@
           (:ccl
            (when (ccl plan)
              (setf (ccl plan) value)))
-           (:entry
+          (:entry
            (when (dispatched-entries plan)
              (error 'entry-and-dispatched-entry))
            (when (entry plan)
@@ -158,11 +161,8 @@
                           :flag (format nil "~A ~A" argument value))
                    (setf default-dispatched-entry entry)))
              (push entry (dispatched-entries plan))))
-          (:dynamic-space-size
+          #+sbcl
+          (:space-size ;; :dynamic-space-size
            (setf (dynamic-space-size plan) (parse-integer value)))
           (t
            (error 'unknown-argument :flag argument)))))))
-
-
-
-

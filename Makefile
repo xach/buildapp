@@ -2,7 +2,7 @@ DESTDIR = /usr/local
 LISP := sbcl
 
 ifeq ($(LISP),sbcl)
-FLAGS=--noinform --no-userinit --no-sysinit --disable-debugger
+FLAGS=--no-userinit --no-sysinit --disable-debugger
 else
 FLAGS=--quiet --no-init
 endif

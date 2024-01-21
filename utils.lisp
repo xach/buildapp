@@ -35,8 +35,15 @@
   #+sbcl 'sb-ext:*posix-argv*
   #+ccl  '(ccl::command-line-arguments))
 
+#+sbcl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (let ((version (uiop:lisp-version-string)))
+    (unless (uiop:version<= version "1.12.5")
+      (push :sb-list-backtrace *features*))))
+
 (defmacro backtrace-as-list ()
-  #+sbcl '(sb-debug:backtrace-as-list)
+  #+(and sbcl sb-list-backtrace) '(sb-debug:list-backtrace)
+  #+(and sbcl (not sb-list-backtrace)) '(sb-debug:backtrace-as-list)
   #+ccl  '(ccl::backtrace-as-list))
 
 (defmacro quit (&optional (errno 0))

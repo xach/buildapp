@@ -86,6 +86,10 @@
    (dynamic-space-size
     :initarg :dynamic-space-size
     :accessor dynamic-space-size
+    :initform nil)
+   (disable-ldb
+    :initarg :disable-ldb
+    :reader disable-ldb
     :initform nil)))
 
 (defgeneric needs-asdf-p (dumper)

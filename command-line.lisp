@@ -109,6 +109,7 @@
         (unless (output plan)
           (error 'missing-output-argument))
         (setf (asdf-directives plan) (reverse (asdf-directives plan)))
+        (describe plan)
         (return plan))
       (let* ((argument (pop args))
              (value (pop args))
@@ -162,7 +163,3 @@
            (setf (dynamic-space-size plan) (parse-integer value)))
           (t
            (error 'unknown-argument :flag argument)))))))
-
-
-
-
